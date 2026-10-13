@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Janusz — Licytuj i sprzedawaj w Polsce</title>
+  <meta name="description" content="Polski marketplace z licytacjami. Wystaw rower, telefon albo garnek — ustaw cenę minimalną, czas i niech Janusz zrobi resztę.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="header">
+    <nav class="nav container">
+      <a href="#" class="logo" aria-label="Janusz">
+        <img class="logo-mark" src="images/logo.png" alt="Janusz" width="140" height="50" fetchpriority="high">
+      </a>
+      <ul class="nav-links">
+        <li><a href="#jak-dziala">Jak działa</a></li>
+        <li><a href="#funkcje">Funkcje</a></li>
+        <li><a href="#kategorie">Kategorie</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#lista" class="btn btn-ghost">Zapisz się</a>
+        <a href="#lista" class="btn btn-primary">Dołącz do listy</a>
+      </div>
+      <button class="menu-toggle" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="badge">
+            <span class="badge-dot"></span>
+            Polski marketplace z licytacjami — po naszemu
+          </div>
+          <h1>
+            Sprzedaj to, co leży w piwnicy.
+            <span class="hero-accent">Ktoś to kupi.</span>
+          </h1>
+          <p class="hero-lead">
+            Wystawiasz przedmiot, ustawiasz minimalną cenę i czas licytacji.
+            Licytujący bidują, Ty wybierasz zwycięzcę i dogadujecie się na odbiór.
+            Prosto, szybko, bez kombinowania.
+          </p>
+          <div class="hero-cta">
+            <a href="#lista" class="btn btn-primary btn-lg">Chcę wczesny dostęp</a>
+            <a href="#jak-dziala" class="btn btn-outline btn-lg">Zobacz jak to działa</a>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <strong>0 zł</strong>
+              <span>prowizji na start</span>
+            </div>
+            <div class="stat">
+              <strong>24h</strong>
+              <span>min. czas aukcji</span>
+            </div>
+            <div class="stat">
+              <strong>100%</strong>
+              <span>polska obsługa</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="auction-card">
+            <div class="auction-card-header">
+              <span class="live-badge">● Na żywo</span>
+              <span class="auction-timer" id="countdown">02:14:37</span>
+            </div>
+            <div class="auction-image">
+              <img src="images/bike.jpg" alt="Rower miejski na licytacji" width="800" height="533" loading="eager">
+            </div>
+            <div class="auction-body">
+              <h3>Rower miejski — stan bdb, Janusz jeździł do Biedry</h3>
+              <p class="auction-meta">Warszawa · 12 osób obserwuje</p>
+              <div class="auction-bids">
+                <div class="current-bid">
+                  <span class="label">Aktualna oferta</span>
+                  <span class="amount" id="current-bid">420 zł</span>
+                </div>
+                <div class="min-bid">
+                  <span class="label">Minimum</span>
+                  <span>350 zł</span>
+                </div>
+              </div>
+              <button class="btn btn-bid" type="button">Licytuj +10 zł</button>
+              <p class="auction-note">Po wygranej — kontakt ze sprzedawcą i ustalacie odbiór</p>
+            </div>
+          </div>
+          <div class="floating-chip chip-1">🔥 3 nowe oferty</div>
+          <div class="floating-chip chip-2">📦 Odbiór osobisty OK</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-bar">
+      <div class="container trust-inner">
+        <p>Inspirowane najlepszymi marketplace'ami — zaprojektowane pod polski rynek</p>
+        <div class="trust-pills">
+          <span>Licytacje czasowe</span>
+          <span>Cena minimalna</span>
+          <span>Wiadomości z kupującym</span>
+          <span>Odbiór lub wysyłka</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="jak-dziala" class="section how-it-works">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Jak to działa</span>
+          <h2>Trzy kroki od piwnicy do kieszeni</h2>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <div class="step-num">01</div>
+            <h3>Wystaw przedmiot</h3>
+            <p>Zrób zdjęcia, opisz co sprzedajesz, ustaw <strong>cenę startową</strong> i <strong>czas trwania</strong> licytacji — np. 3 dni.</p>
+          </article>
+          <article class="step">
+            <div class="step-num">02</div>
+            <h3>Obserwuj licytację</h3>
+            <p>Kupujący składają oferty. Widzisz każdą na żywo. Możesz odpowiadać na pytania w czacie aukcji.</p>
+          </article>
+          <article class="step">
+            <div class="step-num">03</div>
+            <h3>Dogadaj się i oddaj</h3>
+            <p>Po zakończeniu wygrywa najwyższa oferta. Ustalacie odbiór osobisty, paczkomat albo kuriera — po swojemu.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="funkcje" class="section features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Funkcje</span>
+          <h2>Co dostaniesz w Janusz</h2>
+          <p class="section-desc">Proste narzędzia do sprzedaży z licytacji — bez zbędnych komplikacji, bardziej lokalnie, bardziej „Janusz”.</p>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card feature-highlight">
+            <div class="feature-icon">⏱</div>
+            <h3>Licytacja z timerem</h3>
+            <p>Ustawiasz dokładny czas — od 24 godzin do 14 dni. Gdy zegar dojdzie do zera, wygrywa najwyższa oferta powyżej minimum.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">💰</div>
+            <h3>Cena minimalna</h3>
+            <p>Ty decydujesz, ile minimum chcesz dostać. Nikt nie wygra aukcji poniżej Twojej granicy — koniec z „dam 50 zł za rower”.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">💬</div>
+            <h3>Czat sprzedawca–kupujący</h3>
+            <p>Po wygranej licytacji rozmawiacie w aplikacji: termin odbioru, płatność (BLIK, gotówka, przelew), ewentualne negocjacje.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">📍</div>
+            <h3>Lokalnie i na całą Polskę</h3>
+            <p>Odbiór osobisty w Twojej okolicy albo wysyłka InPostem. Ty wybierasz, co oferujesz.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🔔</div>
+            <h3>Powiadomienia na żywo</h3>
+            <p>Nowa oferta, końcówka aukcji, pytanie od kupującego — dostajesz pusha, żeby nic nie umknęło.</p>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon">🛡</div>
+            <h3>Profil i oceny</h3>
+            <p>Po transakcji wystawiacie sobie oceny. Budujesz reputację — jak na Allegro, ale bez korpo-vibe'u.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compare">
+      <div class="container compare-grid">
+        <div class="compare-text">
+          <span class="section-tag">Dlaczego Janusz?</span>
+          <h2>Licytacje, które mają sens w Polsce.</h2>
+          <p>Wystawiasz rzecz, ustawiasz minimum i czas — reszta dzieje się sama. Kupujący licytują, Ty dogadujesz odbiór. Bez korpo-tonu, normalnie, po polsku.</p>
+          <ul class="compare-list">
+            <li><strong>Janusz</strong> — krótka nazwa, którą zapamiętasz</li>
+            <li>Licytacje zamiast tylko „kup teraz”</li>
+            <li>Focus na rzeczach używanych i lokalnych transakcjach</li>
+            <li>Bez korpo-biznesowego tonu — normalnie, po polsku</li>
+          </ul>
+        </div>
+        <div class="compare-cards">
+          <div class="compare-card compare-them">
+            <span class="compare-label">Typowe ogłoszenia</span>
+            <ul>
+              <li>Cena do negocjacji w wiadomości</li>
+              <li>Brak presji czasu</li>
+              <li>„Ostatnia cena?” w nieskończoność</li>
+              <li>Trudno ustalić fair value</li>
+            </ul>
+          </div>
+          <div class="compare-card compare-us">
+            <span class="compare-label">Janusz 🇵🇱</span>
+            <ul>
+              <li>Licytacje z timerem</li>
+              <li>Cena minimalna + czat</li>
+              <li>Odbiór osobisty first</li>
+              <li>Startujemy w Polsce</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="kategorie" class="section categories">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Kategorie</span>
+          <h2>Co ludzie wystawiają?</h2>
+        </div>
+        <div class="category-grid">
+          <div class="category">🚲 Sport i rowery</div>
+          <div class="category">📱 Elektronika</div>
+          <div class="category">👕 Moda</div>
+          <div class="category">🏠 Dom i ogród</div>
+          <div class="category">📚 Książki i gry</div>
+          <div class="category">🔧 Narzędzia</div>
+          <div class="category">🎸 Hobby</div>
+          <div class="category">🚗 Motoryzacja</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="lista" class="section cta">
+      <div class="container cta-box">
+        <div class="cta-content">
+          <h2>Bądź pierwszy na liście Janusza</h2>
+          <p>Zapisz email — damy znać, gdy wystartujemy w Twoim mieście. Zero spamu, tylko info o starcie.</p>
+          <form class="waitlist-form" id="waitlist-form">
+            <input type="email" name="email" placeholder="twoj@email.pl" required aria-label="Adres email">
+            <button type="submit" class="btn btn-primary">Zapisz mnie</button>
+          </form>
+          <p class="form-success" id="form-success" hidden>Dzięki! Janusz już zapisuje Twój email na liście. 🎉</p>
+        </div>
+        <div class="cta-visual">
+          <div class="cta-stat-ring">
+            <span class="ring-number">847</span>
+            <span class="ring-label">osób na liście</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo" aria-label="Janusz">
+          <img class="logo-mark" src="images/logo.png" alt="Janusz" width="140" height="50" fetchpriority="high">
+        </a>
+        <p>Polski marketplace z licytacjami.<br>Projekt w fazie MVP — landing page v0.1</p>
+      </div>
+      <div class="footer-links">
+        <h4>Produkt</h4>
+        <a href="#jak-dziala">Jak działa</a>
+        <a href="#funkcje">Funkcje</a>
+        <a href="#lista">Lista oczekujących</a>
+      </div>
+      <div class="footer-links">
+        <h4>Prawne</h4>
+        <a href="#">Regulamin</a>
+        <a href="#">Polityka prywatności</a>
+        <a href="#">Kontakt</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>© 2026 Janusz. Wszystkie prawa zastrzeżone.</p>
+      <p class="footer-joke">Nie mylić z prawdziwym Januszem z piwnicy.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

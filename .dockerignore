@@ -1,0 +1,10 @@
+.git
+.DS_Store
+assets
+landing
+deploy
+web/node_modules
+web/dist
+search/node_modules
+search/.env
+*.md

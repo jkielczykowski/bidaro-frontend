@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bidigo">
+  <rect width="64" height="64" rx="14" fill="#1a2744"/>
+  <!-- stylized b -->
+  <path
+    fill="#ffffff"
+    d="M20 12h11.8c8.2 0 13.7 4.4 13.7 11.2 0 4.2-2.2 7.5-5.8 9.2 4.8 1.7 7.8 5.4 7.8 10.6 0 7.4-5.9 12-15.2 12H20V12zm9.4 8.2v9.2h6.6c3.5 0 5.5-1.7 5.5-4.6 0-2.9-2-4.6-5.5-4.6h-6.6zm0 16.4v10.2h7.8c3.9 0 6.3-1.9 6.3-5.1 0-3.2-2.4-5.1-6.3-5.1h-7.8z"
+  />
+  <!-- orange period like bidigo. -->
+  <circle cx="48.5" cy="50.5" r="5" fill="#ff8551"/>
+</svg>
