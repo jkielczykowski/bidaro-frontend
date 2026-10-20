@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RedirectAuction, RedirectAuctionEdit, RedirectMessage } from './components/LegacyRedirects'
 import { Layout } from './components/Layout'
+import { ScrollManager } from './components/ScrollManager'
 import { AuthProvider } from './lib/auth'
 import { NotificationsProvider } from './lib/notifications'
 import { UnreadMessagesProvider } from './lib/unreadMessages'
@@ -29,6 +30,7 @@ export default function App() {
       <UnreadMessagesProvider>
         <NotificationsProvider>
           <BrowserRouter>
+            <ScrollManager />
             <Layout>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
