@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { CategoryPicker } from '../components/CategoryPicker'
 import { CitySuggest } from '../components/CitySuggest'
+import { LocationMapPicker } from '../components/LocationMap'
 import { geocodeCity } from '../lib/cities'
 import { ImageCropDialog } from '../components/ImageCropDialog'
 import { useAuth } from '../lib/auth'
@@ -37,7 +38,7 @@ type FieldErrors = {
   bidIncrement?: string
   reservePrice?: string
   buyNowPrice?: string
-  endsOn?: string
+  durationDays?: string
   shipping?: string
 }
 
@@ -61,8 +62,10 @@ export function CreateAuctionPage() {
   const [reservePrice, setReservePrice] = useState('')
   const [bidIncrement, setBidIncrement] = useState('10')
   const [buyNowPrice, setBuyNowPrice] = useState('')
-  const [endsOn, setEndsOn] = useState(() => isoDay(7))
+  const [durationDays, setDurationDays] = useState<7 | 14>(7)
+  const [autoRenew, setAutoRenew] = useState(false)
   const [shipping, setShipping] = useState<string[]>(['odbior'])
+  const endsOn = useMemo(() => isoDay(durationDays), [durationDays])
   const [photos, setPhotos] = useState<PhotoItem[]>([])
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
@@ -208,6 +211,8 @@ export function CreateAuctionPage() {
     }
     if (!city.trim() || city.trim().length < 2) {
       errs.city = 'Podaj miasto'
+    } else if (cityLat == null || cityLng == null) {
+      errs.city = 'Ustaw lokalizację na mapie (wybierz miasto lub kliknij mapę)'
     }
     if (photos.length < 1) {
       errs.photos = 'Zdjęcie jest wymagane — dodaj co najmniej 1'
@@ -237,14 +242,8 @@ export function CreateAuctionPage() {
     if (shipping.length < 1) {
       errs.shipping = 'Wybierz co najmniej jedną opcję dostawy'
     }
-    const end = new Date(`${endsOn}T23:59:00`)
-    const latest = new Date()
-    latest.setDate(latest.getDate() + 30)
-    latest.setHours(23, 59, 59, 999)
-    if (!endsOn || Number.isNaN(end.getTime()) || end.getTime() <= Date.now()) {
-      errs.endsOn = 'Wybierz datę w przyszłości'
-    } else if (end.getTime() > latest.getTime()) {
-      errs.endsOn = 'Aukcja może trwać najwyżej 30 dni'
+    if (durationDays !== 7 && durationDays !== 14) {
+      errs.durationDays = 'Wybierz 7 albo 14 dni'
     }
     return errs
   }
@@ -252,7 +251,25 @@ export function CreateAuctionPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!user) return
+
+    let lat = cityLat
+    let lng = cityLng
+    if ((lat == null || lng == null) && city.trim().length >= 2) {
+      const place = await geocodeCity(city.trim())
+      if (place) {
+        lat = place.lat
+        lng = place.lng
+        setCityLat(place.lat)
+        setCityLng(place.lng)
+      }
+    }
+
     const errs = validate()
+    if ((lat == null || lng == null) && city.trim().length >= 2) {
+      errs.city = 'Ustaw lokalizację na mapie (wybierz miasto lub kliknij mapę)'
+    } else if (lat != null && lng != null) {
+      delete errs.city
+    }
     setFieldErrors(errs)
     if (Object.keys(errs).length) {
       setError('Uzupełnij wymagane pola')
@@ -277,18 +294,6 @@ export function CreateAuctionPage() {
       const endsAt = new Date(`${endsOn}T23:59:00`).toISOString()
       const start = Number(startingPrice)
 
-      let lat = cityLat
-      let lng = cityLng
-      if ((lat == null || lng == null) && city.trim().length >= 2) {
-        const place = await geocodeCity(city.trim())
-        if (place) {
-          lat = place.lat
-          lng = place.lng
-          setCityLat(place.lat)
-          setCityLng(place.lng)
-        }
-      }
-
       const textFlags = scanAuctionText(title.trim(), description.trim())
       const imageFlags = await scanAuctionImages(photos.map((p) => p.file))
       const botReasons = [...new Set([...textFlags, ...imageFlags])]
@@ -309,6 +314,8 @@ export function CreateAuctionPage() {
         ends_at: endsAt,
         city: city.trim(),
         shipping_options: shipping,
+        duration_days: durationDays,
+        auto_renew: autoRenew,
         moderation_reasons: botReasons,
       }
 
@@ -323,13 +330,10 @@ export function CreateAuctionPage() {
         .select('*')
         .single()
 
-      // DB bez kolumn lat/lng — zapisz bez geo (OpenSearch i tak zgeokoduje miasto)
-      if (insErr && /lat|lng|column/i.test(insErr.message)) {
-        ;({ data, error: insErr } = await supabase
-          .from('auctions')
-          .insert(baseInsert)
-          .select('*')
-          .single())
+      // Starsza baza bez lat/lng / auto_renew — spróbuj bez opcjonalnych kolumn
+      if (insErr && /lat|lng|auto_renew|duration_days|column/i.test(insErr.message)) {
+        const { duration_days: _d, auto_renew: _a, lat: _la, lng: _ln, ...legacy } = insertPayload
+        ;({ data, error: insErr } = await supabase.from('auctions').insert(legacy).select('*').single())
       }
 
       if (insErr) throw insErr
@@ -423,6 +427,8 @@ export function CreateAuctionPage() {
         <CitySuggest
           value={city}
           error={fieldErrors.city}
+          label="Miejscowość"
+          placeholder="Wpisz i wybierz z listy (np. Warszawa)…"
           onChange={(c) => {
             setCity(c)
             setFieldErrors((er) => ({ ...er, city: undefined }))
@@ -430,8 +436,18 @@ export function CreateAuctionPage() {
           onPlaceSelect={(place) => {
             setCityLat(place?.lat ?? null)
             setCityLng(place?.lng ?? null)
+            if (place) setFieldErrors((er) => ({ ...er, city: undefined }))
           }}
         />
+        <p className="muted city-search-hint">
+          Wpisz min. 2 znaki i <strong>wybierz miejscowość z podpowiedzi</strong> — zapisujemy współrzędne, żeby
+          wyszukiwanie po promieniu było szybkie.
+        </p>
+        {cityLat != null && cityLng != null && (
+          <p className="muted city-search-hint" style={{ color: 'var(--accent-hover)' }}>
+            Lokalizacja zapisana ({cityLat.toFixed(4)}, {cityLng.toFixed(4)})
+          </p>
+        )}
 
         <div className={`photo-field ${fieldErrors.photos ? 'has-error' : ''}`}>
           <span className="field-label">
@@ -526,24 +542,39 @@ export function CreateAuctionPage() {
             {fieldErrors.buyNowPrice && <span className="field-error">{fieldErrors.buyNowPrice}</span>}
           </label>
         </div>
-        <label className={fieldErrors.endsOn ? 'has-error' : ''}>
-          <span className="label-text">
-            Wystawione do<span className="req"> *</span>
-          </span>
-          <input
-            type="date"
-            required
-            min={isoDay(0)}
-            max={isoDay(30)}
-            value={endsOn}
-            onChange={(e) => {
-              setEndsOn(e.target.value)
-              setFieldErrors((er) => ({ ...er, endsOn: undefined }))
-            }}
-          />
-          <span className="muted">Aukcja kończy się o 23:59 tego dnia. Najdalej za 30 dni.</span>
-          {fieldErrors.endsOn && <span className="field-error">{fieldErrors.endsOn}</span>}
-        </label>
+        <fieldset className={`duration-field ${fieldErrors.durationDays ? 'has-error' : ''}`}>
+          <legend>
+            <span className="label-text">
+              Czas trwania<span className="req"> *</span>
+            </span>
+          </legend>
+          <div className="duration-chips">
+            {([7, 14] as const).map((d) => (
+              <button
+                key={d}
+                type="button"
+                className={`duration-chip ${durationDays === d ? 'is-active' : ''}`}
+                onClick={() => {
+                  setDurationDays(d)
+                  setFieldErrors((er) => ({ ...er, durationDays: undefined }))
+                }}
+              >
+                {d} dni
+              </button>
+            ))}
+          </div>
+          <p className="muted">
+            Koniec: <strong>{endsOn}</strong> o 23:59
+          </p>
+          <label className="checkbox auto-renew-check">
+            <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
+            <span>
+              Wznawiaj automatycznie, jeśli nikt nie złoży oferty
+              <span className="muted"> — wystawimy ponownie na kolejne {durationDays} dni</span>
+            </span>
+          </label>
+          {fieldErrors.durationDays && <span className="field-error">{fieldErrors.durationDays}</span>}
+        </fieldset>
         <fieldset className={`shipping ${fieldErrors.shipping ? 'has-error' : ''}`}>
           <legend>
             <span className="label-text">
@@ -562,6 +593,11 @@ export function CreateAuctionPage() {
           ))}
           {fieldErrors.shipping && <span className="field-error">{fieldErrors.shipping}</span>}
         </fieldset>
+
+        <div className="location-block">
+          <h3>Lokalizacja na mapie</h3>
+          <LocationMapPicker lat={cityLat} lng={cityLng} city={city || null} />
+        </div>
 
         <div className="fee-box">
           <h3>Prowizja od sprzedaży</h3>

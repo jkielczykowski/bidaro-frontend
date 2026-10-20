@@ -107,7 +107,7 @@ export function MyBiddingPage() {
                 <AuctionCard auction={a} />
                 {a.status === 'sold' && a.winner_id === user.id && (
                   <Link to={`/auction/${a.id}`} className="btn btn-outline btn-sm selling-edit">
-                    Chat ze sprzedawcą
+                    Chat / oceń sprzedawcę
                   </Link>
                 )}
               </div>

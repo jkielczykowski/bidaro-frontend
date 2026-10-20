@@ -144,7 +144,7 @@ export function MySellingPage() {
                   {a.status === 'active' && (
                     <>
                       <Link to={`/auction/${a.id}/edit`} className="btn btn-outline btn-sm selling-edit">
-                        Edytuj
+                        Zarządzaj
                       </Link>
                       <Link to={`/auction/${a.id}`} className="btn btn-ghost btn-sm selling-edit">
                         Zakończ

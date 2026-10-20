@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { LocationMapView } from '../components/LocationMap'
 import { Modal } from '../components/Modal'
 import { useAuth } from '../lib/auth'
-import type { Auction, Bid } from '../lib/database.types'
+import type { Auction, AuctionComment, Bid, SellerNote, SellerRating } from '../lib/database.types'
 import { bidLabel, formatPln, formatRemaining, minNextBid } from '../lib/format'
 import { supabase } from '../lib/supabase'
+
+function formatSellerRating(avg?: number | null, count?: number | null) {
+  const n = Number(count ?? 0)
+  if (!n) return null
+  return `${Number(avg ?? 0).toFixed(1)} ★ (${n})`
+}
 
 export function AuctionDetailPage() {
   const { id } = useParams()
@@ -24,6 +31,17 @@ export function AuctionDetailPage() {
   const [chatBusy, setChatBusy] = useState(false)
   const [endOpen, setEndOpen] = useState(false)
   const [endError, setEndError] = useState<string | null>(null)
+  const [myRating, setMyRating] = useState<SellerRating | null>(null)
+  const [rateScore, setRateScore] = useState(5)
+  const [rateComment, setRateComment] = useState('')
+  const [rateError, setRateError] = useState<string | null>(null)
+  const [rateBusy, setRateBusy] = useState(false)
+  const [comments, setComments] = useState<AuctionComment[]>([])
+  const [commentBody, setCommentBody] = useState('')
+  const [commentError, setCommentError] = useState<string | null>(null)
+  const [commentBusy, setCommentBusy] = useState(false)
+  const [replyToId, setReplyToId] = useState<string | null>(null)
+  const [replyBody, setReplyBody] = useState('')
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000)
@@ -61,6 +79,20 @@ export function AuctionDetailPage() {
       Number(auctionRow.bid_count),
     )
     setAmount(String(min))
+
+    const { data: ratingRow } = await supabase
+      .from('seller_ratings')
+      .select('*')
+      .eq('auction_id', id)
+      .maybeSingle()
+    setMyRating((ratingRow as SellerRating | null) ?? null)
+
+    const { data: commentRows } = await supabase
+      .from('auction_comments')
+      .select('*, author:profiles!auction_comments_author_id_fkey(*)')
+      .eq('auction_id', id)
+      .order('created_at', { ascending: true })
+    setComments((commentRows as AuctionComment[]) ?? [])
   }
 
   useEffect(() => {
@@ -76,6 +108,11 @@ export function AuctionDetailPage() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'bids', filter: `auction_id=eq.${id}` },
+        () => void load(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'auction_comments', filter: `auction_id=eq.${id}` },
         () => void load(),
       )
       .subscribe()
@@ -97,8 +134,93 @@ export function AuctionDetailPage() {
   const isAdmin = !!profile?.is_admin
   const isWinner = !!user && auction?.winner_id === user.id
   const canChat = auction?.status === 'sold' && (isSeller || isWinner)
+  const canRateSeller = auction?.status === 'sold' && isWinner && !isSeller
   const pendingReview = auction?.moderation_status === 'pending_review'
   const rejected = auction?.moderation_status === 'rejected'
+  const sellerRatingLabel = formatSellerRating(auction?.seller?.rating_avg, auction?.seller?.rating_count)
+
+  async function submitComment(e: FormEvent, parentId?: string | null) {
+    e.preventDefault()
+    if (!user) {
+      navigate(`/login?next=/auction/${id}`)
+      return
+    }
+    if (!id) return
+    const body = (parentId ? replyBody : commentBody).trim()
+    if (body.length < 2) {
+      setCommentError('Napisz co najmniej 2 znaki')
+      return
+    }
+    if (parentId && !isSeller) {
+      setCommentError('Tylko sprzedawca może odpowiadać w wątku')
+      return
+    }
+    setCommentBusy(true)
+    setCommentError(null)
+    try {
+      const { error: err } = await supabase.from('auction_comments').insert({
+        auction_id: id,
+        author_id: user.id,
+        body,
+        parent_id: parentId || null,
+      })
+      if (err) throw err
+      if (parentId) {
+        setReplyBody('')
+        setReplyToId(null)
+      } else {
+        setCommentBody('')
+      }
+      await load()
+    } catch (err) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : err instanceof Error
+            ? err.message
+            : 'Nie udało się dodać komentarza'
+      setCommentError(msg || 'Nie udało się dodać komentarza')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  async function deleteComment(commentId: string) {
+    if (!user) return
+    setCommentBusy(true)
+    setCommentError(null)
+    try {
+      const { error: err } = await supabase.from('auction_comments').delete().eq('id', commentId).eq('author_id', user.id)
+      if (err) throw err
+      await load()
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : 'Nie udało się usunąć komentarza')
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  async function submitSellerRating(e: FormEvent) {
+    e.preventDefault()
+    if (!id || !canRateSeller) return
+    setRateBusy(true)
+    setRateError(null)
+    try {
+      const { data, error: err } = await supabase.rpc('rate_seller', {
+        p_auction_id: id,
+        p_score: rateScore,
+        p_comment: rateComment.trim() || null,
+      })
+      if (err) throw err
+      setMyRating(data as SellerRating)
+      setRateComment('')
+      await load()
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : 'Nie udało się zapisać oceny')
+    } finally {
+      setRateBusy(false)
+    }
+  }
 
   const minBid = useMemo(() => {
     if (!auction) return 0
@@ -320,11 +442,12 @@ export function AuctionDetailPage() {
             {auction.city || 'Polska'}
             {auction.category?.name ? ` · ${auction.category.name}` : ''}
             {auction.seller?.display_name ? ` · sprzedaje ${auction.seller.display_name}` : ''}
+            {sellerRatingLabel ? ` · ${sellerRatingLabel}` : ''}
           </p>
           {isSeller && live && (
             <div className="seller-actions">
               <Link to={`/auction/${auction.id}/edit`} className="btn btn-outline">
-                Edytuj ofertę
+                Zarządzaj ofertą
               </Link>
               <button
                 type="button"
@@ -355,7 +478,9 @@ export function AuctionDetailPage() {
           </div>
 
           {live && isSeller && (
-            <p className="hint">To Twoja aukcja — możesz dodać lub zmienić „Kup teraz” w edycji oferty.</p>
+            <p className="hint">
+              To Twoja aukcja — opis i zdjęcia są zablokowane. Możesz dodać notatkę lub zmienić „Kup teraz”.
+            </p>
           )}
 
           {live && !isSeller && user && !profile?.phone_verified_at && (
@@ -442,6 +567,49 @@ export function AuctionDetailPage() {
                 </button>
               )}
               {!user && <p className="hint">Zaloguj się, żeby napisać po zakupie.</p>}
+
+              {canRateSeller && (
+                <div className="seller-rate-box">
+                  {myRating ? (
+                    <p className="muted">
+                      Twoja ocena sprzedawcy: <strong>{myRating.score}/5</strong>
+                      {myRating.comment ? ` — „${myRating.comment}”` : ''}
+                    </p>
+                  ) : (
+                    <form className="seller-rate-form" onSubmit={(e) => void submitSellerRating(e)}>
+                      <h3>Oceń sprzedawcę</h3>
+                      <p className="muted">Tylko Ty jako kupujący możesz wystawić ocenę za tę transakcję.</p>
+                      <div className="star-picker" role="group" aria-label="Ocena od 1 do 5">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className={`star-btn ${rateScore >= n ? 'is-on' : ''}`}
+                            aria-label={`${n} na 5`}
+                            onClick={() => setRateScore(n)}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <label>
+                        Komentarz (opcjonalnie)
+                        <textarea
+                          rows={2}
+                          maxLength={500}
+                          value={rateComment}
+                          onChange={(e) => setRateComment(e.target.value)}
+                          placeholder="Np. Szybka wysyłka, zgodne z opisem…"
+                        />
+                      </label>
+                      {rateError && <p className="error">{rateError}</p>}
+                      <button className="btn btn-outline" type="submit" disabled={rateBusy}>
+                        {rateBusy ? 'Zapisywanie…' : `Wyślij ocenę ${rateScore}/5`}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -462,6 +630,21 @@ export function AuctionDetailPage() {
         <h2>Opis</h2>
         <p className="description">{auction.description || 'Brak opisu.'}</p>
         <p className="muted">Dostawa: {auction.shipping_options?.join(', ') || 'do uzgodnienia'}</p>
+        {Array.isArray(auction.seller_notes) && auction.seller_notes.length > 0 && (
+          <div className="seller-notes">
+            <h3>Notatki sprzedawcy</h3>
+            <ul>
+              {(auction.seller_notes as SellerNote[]).map((n, i) => (
+                <li key={`${n.created_at}-${i}`}>
+                  <p>{n.body}</p>
+                  <time className="muted">
+                    {n.created_at ? new Date(n.created_at).toLocaleString('pl-PL') : ''}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <section className="section-block">
@@ -480,6 +663,158 @@ export function AuctionDetailPage() {
           </ul>
         )}
       </section>
+
+      <section className="section-block auction-comments">
+        <h2>
+          Pytania i odpowiedzi{' '}
+          {comments.filter((c) => !c.parent_id).length > 0
+            ? `(${comments.filter((c) => !c.parent_id).length})`
+            : ''}
+        </h2>
+        {comments.filter((c) => !c.parent_id).length === 0 ? (
+          <p className="muted">Brak pytań — zadaj pytanie sprzedawcy.</p>
+        ) : (
+          <ul className="comment-list">
+            {comments
+              .filter((c) => !c.parent_id)
+              .map((c) => {
+                const replies = comments.filter((r) => r.parent_id === c.id)
+                return (
+                  <li key={c.id} className="comment-thread">
+                    <div className="comment-head">
+                      <strong>{c.author?.display_name || c.author?.username || 'Użytkownik'}</strong>
+                      <time className="muted">{new Date(c.created_at).toLocaleString('pl-PL')}</time>
+                    </div>
+                    <p className="comment-body">{c.body}</p>
+                    <div className="comment-actions">
+                      {user && (c.author_id === user.id || isAdmin) && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs"
+                          disabled={commentBusy}
+                          onClick={() => void deleteComment(c.id)}
+                        >
+                          Usuń
+                        </button>
+                      )}
+                      {isSeller && replyToId !== c.id && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs"
+                          onClick={() => {
+                            setReplyToId(c.id)
+                            setReplyBody('')
+                            setCommentError(null)
+                          }}
+                        >
+                          Odpowiedz
+                        </button>
+                      )}
+                    </div>
+
+                    {replies.length > 0 && (
+                      <ul className="comment-replies">
+                        {replies.map((r) => (
+                          <li key={r.id} className="comment-reply">
+                            <div className="comment-head">
+                              <strong>
+                                {r.author?.display_name || r.author?.username || 'Sprzedawca'}
+                                <span className="comment-seller-badge">Sprzedawca</span>
+                              </strong>
+                              <time className="muted">{new Date(r.created_at).toLocaleString('pl-PL')}</time>
+                            </div>
+                            <p className="comment-body">{r.body}</p>
+                            {user && (r.author_id === user.id || isAdmin) && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-xs"
+                                disabled={commentBusy}
+                                onClick={() => void deleteComment(r.id)}
+                              >
+                                Usuń
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {isSeller && replyToId === c.id && (
+                      <form className="comment-form comment-reply-form" onSubmit={(e) => void submitComment(e, c.id)}>
+                        <label>
+                          Twoja odpowiedź
+                          <textarea
+                            rows={2}
+                            maxLength={1000}
+                            value={replyBody}
+                            autoFocus
+                            onChange={(e) => {
+                              setReplyBody(e.target.value)
+                              setCommentError(null)
+                            }}
+                            placeholder="Odpowiedź dla kupującego…"
+                          />
+                        </label>
+                        <div className="comment-actions">
+                          <button className="btn btn-outline btn-sm" type="submit" disabled={commentBusy}>
+                            {commentBusy ? 'Wysyłanie…' : 'Wyślij odpowiedź'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            disabled={commentBusy}
+                            onClick={() => {
+                              setReplyToId(null)
+                              setReplyBody('')
+                            }}
+                          >
+                            Anuluj
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </li>
+                )
+              })}
+          </ul>
+        )}
+
+        {user && !isSeller ? (
+          <form className="comment-form" onSubmit={(e) => void submitComment(e)}>
+            <label>
+              Zadaj pytanie
+              <textarea
+                rows={3}
+                maxLength={1000}
+                value={commentBody}
+                onChange={(e) => {
+                  setCommentBody(e.target.value)
+                  setCommentError(null)
+                }}
+                placeholder="Pytanie o stan, wysyłkę, odbiór…"
+              />
+            </label>
+            {commentError && <p className="error">{commentError}</p>}
+            <button className="btn btn-outline" type="submit" disabled={commentBusy}>
+              {commentBusy ? 'Wysyłanie…' : 'Dodaj pytanie'}
+            </button>
+          </form>
+        ) : user && isSeller ? (
+          <p className="muted">Jako sprzedawca odpowiadasz w wątku pod pytaniem kupującego.</p>
+        ) : (
+          <p className="muted">
+            <Link to={`/login?next=/auction/${id}`}>Zaloguj się</Link>, żeby zadać pytanie.
+          </p>
+        )}
+        {commentError && isSeller && <p className="error">{commentError}</p>}
+      </section>
+
+      {auction.lat != null && auction.lng != null && (
+        <section className="section-block">
+          <h2>Lokalizacja</h2>
+          <LocationMapView lat={Number(auction.lat)} lng={Number(auction.lng)} city={auction.city} />
+        </section>
+      )}
 
       <Modal open={buyNowOpen} title="Kup teraz" onClose={() => !busy && setBuyNowOpen(false)}>
         <div className="buy-now-modal">

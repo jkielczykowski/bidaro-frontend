@@ -12,19 +12,21 @@ type CitySuggestProps = {
   compact?: boolean
 }
 
+/** FluffyTag-style city autocomplete (Photon text search). */
 export function CitySuggest({
   value,
   onChange,
   onPlaceSelect,
   error,
   required = true,
-  label = 'Miasto',
-  placeholder = 'Np. Warszawa, Kraków…',
+  label = 'Miejscowość',
+  placeholder = 'Wpisz miejscowość…',
   compact = false,
 }: CitySuggestProps) {
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
   const dirtyRef = useRef(false)
+  const selectedNameRef = useRef<string | null>(null)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value)
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([])
@@ -33,7 +35,8 @@ export function CitySuggest({
 
   useEffect(() => {
     if (value === query || value === query.trim()) return
-    dirtyRef.current = false
+    // External value sync only — don't kill in-progress typing search
+    if (dirtyRef.current) return
     setQuery(value)
     setOpen(false)
     setSuggestions([])
@@ -61,17 +64,18 @@ export function CitySuggest({
         .then((rows) => {
           if (ctrl.signal.aborted) return
           setSuggestions(rows)
-          setOpen(true)
           setHighlight(0)
+          setOpen(true)
         })
         .catch(() => {
           if (ctrl.signal.aborted) return
           setSuggestions([])
+          setOpen(true)
         })
         .finally(() => {
           if (!ctrl.signal.aborted) setLoading(false)
         })
-    }, 200)
+    }, 250)
 
     return () => {
       window.clearTimeout(t)
@@ -89,6 +93,7 @@ export function CitySuggest({
 
   function pick(s: CitySuggestion) {
     dirtyRef.current = false
+    selectedNameRef.current = s.name
     setQuery(s.name)
     onChange(s.name)
     onPlaceSelect?.(s)
@@ -98,8 +103,9 @@ export function CitySuggest({
 
   function commitTyped() {
     const trimmed = query.trim()
-    if (trimmed !== value) {
-      onChange(trimmed)
+    if (trimmed !== value) onChange(trimmed)
+    if (selectedNameRef.current != null && trimmed !== selectedNameRef.current) {
+      selectedNameRef.current = null
       onPlaceSelect?.(null)
     }
   }
@@ -115,6 +121,7 @@ export function CitySuggest({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (open && suggestions[highlight]) pick(suggestions[highlight])
+      else if (open && suggestions[0]) pick(suggestions[0])
       else {
         commitTyped()
         setOpen(false)
@@ -139,6 +146,8 @@ export function CitySuggest({
           aria-controls={listId}
           aria-autocomplete="list"
           autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           value={query}
           placeholder={placeholder}
           onFocus={() => {
@@ -146,6 +155,7 @@ export function CitySuggest({
           }}
           onBlur={() => {
             window.setTimeout(() => {
+              if (open && suggestions.length) return
               commitTyped()
               setOpen(false)
             }, 180)
@@ -155,16 +165,19 @@ export function CitySuggest({
             const next = e.target.value
             setQuery(next)
             onChange(next.trim())
-            onPlaceSelect?.(null)
+            if (selectedNameRef.current != null && next.trim() !== selectedNameRef.current) {
+              selectedNameRef.current = null
+              onPlaceSelect?.(null)
+            }
           }}
           onKeyDown={onKeyDown}
         />
       </label>
       {showList && (
         <ul id={listId} className="city-suggest-list" role="listbox">
-          {loading && suggestions.length === 0 && <li className="city-suggest-hint">Szukam miast…</li>}
+          {loading && suggestions.length === 0 && <li className="city-suggest-hint">Szukam…</li>}
           {!loading && suggestions.length === 0 && (
-            <li className="city-suggest-hint">Brak podpowiedzi — możesz wpisać miasto ręcznie</li>
+            <li className="city-suggest-hint">Brak podpowiedzi — wybierz z listy albo doprecyzuj nazwę</li>
           )}
           {suggestions.map((s, i) => (
             <li key={s.placeId}>
@@ -174,13 +187,14 @@ export function CitySuggest({
                 aria-selected={i === highlight}
                 className={i === highlight ? 'active' : ''}
                 onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  pick(s)
+                }}
                 onMouseEnter={() => setHighlight(i)}
-                onClick={() => pick(s)}
               >
                 <strong>{s.name}</strong>
-                {s.displayName !== s.name && (
-                  <span className="city-suggest-meta">{s.displayName}</span>
-                )}
+                {s.displayName !== s.name && <span className="city-suggest-meta">{s.displayName}</span>}
               </button>
             </li>
           ))}

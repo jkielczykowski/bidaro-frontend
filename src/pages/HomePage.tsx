@@ -13,12 +13,12 @@ import { fetchSearch } from '../lib/searchApi'
 import { supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 12
+// FluffyTag-style radius options
 const RADIUS_OPTIONS = [
   { value: '10', label: '10 km' },
   { value: '25', label: '25 km' },
   { value: '50', label: '50 km' },
   { value: '100', label: '100 km' },
-  { value: '200', label: '200 km' },
 ]
 
 function pathChain(categories: Category[], id: string): Category[] {
@@ -143,24 +143,50 @@ export function HomePage() {
           }
         }
 
-        const os = await fetchSearch({
-          q: q || undefined,
-          category: category !== 'all' ? category : undefined,
-          city: city.trim().length >= 2 ? city.trim() : undefined,
-          lat: geoLat || undefined,
-          lng: geoLng || undefined,
-          radiusKm: radius || undefined,
-          priceFrom: priceFrom || undefined,
-          priceTo: priceTo || undefined,
-          sort,
-          limit: PAGE_SIZE,
-          offset,
-        })
+        let ids: string[] = []
+        let total = 0
+
+        try {
+          const os = await fetchSearch({
+            q: q || undefined,
+            category: category !== 'all' ? category : undefined,
+            city: city.trim().length >= 2 ? city.trim() : undefined,
+            lat: geoLat || undefined,
+            lng: geoLng || undefined,
+            radiusKm: radius || undefined,
+            priceFrom: priceFrom || undefined,
+            priceTo: priceTo || undefined,
+            sort,
+            limit: PAGE_SIZE,
+            offset,
+          })
+          ids = os.ids?.length ? os.ids : os.hits.map((h) => h.id)
+          total = os.total ?? 0
+        } catch {
+          // Fast fallback: Postgres geo RPC (same as mobile)
+          if (geoLat && geoLng && radius) {
+            const { data: near, error: nearErr } = await supabase.rpc('search_auctions_near', {
+              p_lat: Number(geoLat),
+              p_lng: Number(geoLng),
+              p_radius_km: Number(radius),
+              p_query: q || null,
+              p_category_id: category !== 'all' ? category : null,
+              p_price_from: priceFrom ? Number(priceFrom) : null,
+              p_price_to: priceTo ? Number(priceTo) : null,
+              p_sort: sort,
+              p_limit: PAGE_SIZE,
+              p_offset: offset,
+            })
+            if (nearErr) throw nearErr
+            ids = ((near as { id: string }[]) ?? []).map((r) => r.id)
+            total = ids.length + (ids.length === PAGE_SIZE ? offset + PAGE_SIZE : offset)
+          } else {
+            throw new Error('Nie udało się wyszukać')
+          }
+        }
 
         if (cancelled) return
-
-        const ids = os.ids?.length ? os.ids : os.hits.map((h) => h.id)
-        setTotal(os.total ?? 0)
+        setTotal(total)
 
         if (ids.length === 0) {
           setAuctions([])
@@ -453,10 +479,6 @@ export function HomePage() {
               </button>
             </p>
           </div>
-
-          {!loading && total > 0 && (
-            <Pagination page={page} pageCount={pageCount} total={total} onChange={setPage} />
-          )}
 
           {error && <p className="error">{error}</p>}
           {!loading && !error && auctions.length === 0 && (

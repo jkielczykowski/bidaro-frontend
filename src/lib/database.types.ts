@@ -55,9 +55,14 @@ export type Auction = {
   city: string | null
   lat?: number | null
   lng?: number | null
+  seller_notes?: SellerNote[] | null
   shipping_options: string[]
   watch_count: number
   bid_count: number
+  /** 7 or 14 — used for auto-renew window */
+  duration_days?: number | null
+  /** If true and unsold at end → extend another duration_days */
+  auto_renew?: boolean | null
   moderation_status?: 'approved' | 'pending_review' | 'rejected'
   moderation_reasons?: string[]
   moderation_notes?: string | null
@@ -65,6 +70,32 @@ export type Auction = {
   updated_at: string
   seller?: Profile | null
   category?: Category | null
+}
+
+export type SellerNote = {
+  body: string
+  created_at: string
+}
+
+export type SellerRating = {
+  id: string
+  auction_id: string
+  seller_id: string
+  buyer_id: string
+  score: number
+  comment: string | null
+  created_at: string
+}
+
+export type AuctionComment = {
+  id: string
+  auction_id: string
+  author_id: string
+  body: string
+  created_at: string
+  /** null = root question; set = seller reply in that thread */
+  parent_id?: string | null
+  author?: Profile | null
 }
 
 export type Bid = {
@@ -129,6 +160,14 @@ export type Database = {
       place_bid: {
         Args: { p_auction_id: string; p_amount: number; p_max_amount?: number | null }
         Returns: Bid
+      }
+      append_seller_note: {
+        Args: { p_auction_id: string; p_body: string }
+        Returns: Auction
+      }
+      rate_seller: {
+        Args: { p_auction_id: string; p_score: number; p_comment?: string | null }
+        Returns: SellerRating
       }
       buy_now: {
         Args: { p_auction_id: string }
