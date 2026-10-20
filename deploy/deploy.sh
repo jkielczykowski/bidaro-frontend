@@ -42,6 +42,10 @@ if [[ -z "${SMSPLANET_API_TOKEN}" ]]; then
   echo "⚠ SMSPLANET_API_TOKEN not set — SMS OTP will be skipped until you add it to web/.env"
 fi
 
+if [[ -z "${REINDEX_TOKEN}" ]]; then
+  echo "⚠ REINDEX_TOKEN not set — search write endpoints (/index, /webhook, /reindex) will reject all calls"
+fi
+
 echo "→ Syncing files to ${VPS_USER}@${VPS_HOST}:${REMOTE_DIR}"
 rsync -avz --delete \
   -e "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no" \
@@ -53,6 +57,7 @@ rsync -avz --delete \
   --exclude web/dist \
   --exclude web/.env \
   --exclude search/node_modules \
+  --exclude search/.env \
   --exclude landing \
   "${ROOT}/" \
   "${VPS_USER}@${VPS_HOST}:${REMOTE_DIR}/"

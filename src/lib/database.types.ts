@@ -5,7 +5,8 @@ export type Profile = {
   username: string | null
   display_name: string | null
   city: string | null
-  phone: string | null
+  /** Only present on own profile (rpc my_profile) */
+  phone?: string | null
   phone_verified_at?: string | null
   avatar_url: string | null
   bio: string | null

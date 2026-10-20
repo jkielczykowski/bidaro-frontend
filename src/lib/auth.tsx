@@ -30,8 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
-    setProfile(data as Profile | null)
+    // Own row incl. phone — direct selects can't read phone (column privileges)
+    const { data } = await supabase.rpc('my_profile')
+    const row = data as Profile | null
+    setProfile(row && row.id === userId ? row : null)
   }, [])
 
   const refreshProfile = useCallback(async () => {

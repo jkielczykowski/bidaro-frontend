@@ -5,7 +5,7 @@ import { Modal } from '../components/Modal'
 import { useAuth } from '../lib/auth'
 import type { Auction, AuctionComment, Bid, SellerNote, SellerRating } from '../lib/database.types'
 import { bidLabel, formatPln, formatRemaining, minNextBid } from '../lib/format'
-import { supabase } from '../lib/supabase'
+import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
 
 function formatSellerRating(avg?: number | null, count?: number | null) {
   const n = Number(count ?? 0)
@@ -53,7 +53,7 @@ export function AuctionDetailPage() {
     await supabase.rpc('close_expired_auctions')
     const { data: a, error: aErr } = await supabase
       .from('auctions')
-      .select('*, category:categories(*), seller:profiles!auctions_seller_id_fkey(*)')
+      .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
       .eq('id', id)
       .single()
     if (aErr) {
@@ -65,7 +65,7 @@ export function AuctionDetailPage() {
 
     const { data: b } = await supabase
       .from('bids')
-      .select('*, bidder:profiles!bids_bidder_id_fkey(*)')
+      .select(`*, bidder:profiles!bids_bidder_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
       .eq('auction_id', id)
       .order('created_at', { ascending: false })
       .limit(30)
@@ -89,7 +89,7 @@ export function AuctionDetailPage() {
 
     const { data: commentRows } = await supabase
       .from('auction_comments')
-      .select('*, author:profiles!auction_comments_author_id_fkey(*)')
+      .select(`*, author:profiles!auction_comments_author_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
       .eq('auction_id', id)
       .order('created_at', { ascending: true })
     setComments((commentRows as AuctionComment[]) ?? [])

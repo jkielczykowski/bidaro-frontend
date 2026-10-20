@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CategoryBrowse } from '../components/CategoryBrowse'
 import type { Auction, Category } from '../lib/database.types'
 import { formatCountdown, formatPln, ofertLabel } from '../lib/format'
-import { supabase } from '../lib/supabase'
+import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
 
 type LiveFilter = 'all' | 'bid' | 'buy'
 
@@ -174,7 +174,7 @@ export function LandingPage() {
       const [{ data }, { data: cats }] = await Promise.all([
         supabase
           .from('auctions')
-          .select('*, category:categories(*), seller:profiles!auctions_seller_id_fkey(*)')
+          .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
           .eq('status', 'active')
           .eq('moderation_status', 'approved')
           .order('ends_at', { ascending: true })

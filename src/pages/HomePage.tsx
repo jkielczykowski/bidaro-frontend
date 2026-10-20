@@ -10,7 +10,7 @@ import { SearchBar } from '../components/SearchBar'
 import type { Auction, Category } from '../lib/database.types'
 import { geocodeCity } from '../lib/cities'
 import { fetchSearch } from '../lib/searchApi'
-import { supabase } from '../lib/supabase'
+import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 12
 // FluffyTag-style radius options
@@ -196,7 +196,7 @@ export function HomePage() {
 
         const { data, error: err } = await supabase
           .from('auctions')
-          .select('*, category:categories(*), seller:profiles!auctions_seller_id_fkey(*)')
+          .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
           .in('id', ids)
 
         if (cancelled) return

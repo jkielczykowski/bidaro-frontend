@@ -13,3 +13,7 @@ export const supabase = createClient(url, key, {
     autoRefreshToken: true,
   },
 })
+
+/** Public profile columns — `phone` is not readable by clients (own profile: rpc('my_profile')). */
+export const PUBLIC_PROFILE_COLUMNS =
+  'id, username, display_name, city, avatar_url, bio, rating_avg, rating_count, is_admin, phone_verified_at, created_at, updated_at'
