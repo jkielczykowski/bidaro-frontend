@@ -104,7 +104,6 @@ export type Bid = {
   auction_id: string
   bidder_id: string
   amount: number
-  max_amount: number | null
   created_at: string
   bidder?: Profile | null
 }
