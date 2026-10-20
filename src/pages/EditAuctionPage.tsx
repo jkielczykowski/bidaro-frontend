@@ -14,7 +14,7 @@ type FieldErrors = {
 
 export function EditAuctionPage() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [auction, setAuction] = useState<Auction | null>(null)
   const [buyNowPrice, setBuyNowPrice] = useState('')
@@ -27,8 +27,8 @@ export function EditAuctionPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!user) navigate('/login')
-  }, [user, navigate])
+    if (!authLoading && !user) navigate('/login')
+  }, [authLoading, user, navigate])
 
   async function loadAuction() {
     if (!id || !user) return

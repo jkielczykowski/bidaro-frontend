@@ -13,9 +13,12 @@ export type AppNotification = {
     | 'outbid'
     | 'sold'
     | 'auction_ended'
+    | 'auction_won'
     | 'moderation_held'
     | 'moderation_rejected'
     | 'moderation_approved'
+    | 'seller_rated'
+    | 'auction_comment'
   title: string
   body: string
   auction_id: string | null
@@ -46,6 +49,12 @@ function typeLabel(type: AppNotification['type']) {
       return 'Sprzedaż'
     case 'auction_ended':
       return 'Koniec'
+    case 'auction_won':
+      return 'Wygrana'
+    case 'seller_rated':
+      return 'Ocena'
+    case 'auction_comment':
+      return 'Pytanie'
     case 'moderation_held':
       return 'Weryfikacja'
     case 'moderation_rejected':

@@ -4128,7 +4128,8 @@ select {
   color: #b91c1c;
 }
 
-.notif-badge.sold {
+.notif-badge.sold,
+.notif-badge.auction_won {
   background: #dcfce7;
   color: #15803d;
 }

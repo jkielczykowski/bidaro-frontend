@@ -12,7 +12,7 @@ function displayPhone(phone: string | null | undefined) {
 }
 
 export function VerifyPhonePage() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, loading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next') || '/my'
@@ -27,8 +27,8 @@ export function VerifyPhonePage() {
   const [normalized, setNormalized] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user) navigate('/login', { replace: true })
-  }, [user, navigate])
+    if (!loading && !user) navigate('/login', { replace: true })
+  }, [loading, user, navigate])
 
   useEffect(() => {
     if (profile?.phone_verified_at) {
@@ -91,8 +91,11 @@ export function VerifyPhonePage() {
         p_code: clean,
       })
       if (rpcError) throw rpcError
-      const payload = data as { verification_id?: string }
-      if (!payload.verification_id) throw new Error('Weryfikacja nieudana')
+      const payload = data as { verification_id?: string; error?: string; attempts_left?: number }
+      if (!payload.verification_id) {
+        const left = payload.attempts_left != null ? ` (pozostało prób: ${payload.attempts_left})` : ''
+        throw new Error((payload.error || 'Weryfikacja nieudana') + left)
+      }
 
       const { error: claimError } = await supabase.rpc('claim_phone_verification', {
         p_verification_id: payload.verification_id,

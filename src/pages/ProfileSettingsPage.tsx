@@ -6,7 +6,7 @@ import { normalizePlPhone } from '../lib/phone'
 import { supabase } from '../lib/supabase'
 
 export function ProfileSettingsPage() {
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, loading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
   const [phone, setPhone] = useState('')
@@ -17,8 +17,8 @@ export function ProfileSettingsPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!user) navigate('/login')
-  }, [user, navigate])
+    if (!loading && !user) navigate('/login')
+  }, [loading, user, navigate])
 
   useEffect(() => {
     if (!profile) return

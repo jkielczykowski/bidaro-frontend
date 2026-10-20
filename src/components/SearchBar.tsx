@@ -106,7 +106,7 @@ export function SearchBar({
 
   function pickAuction(a: SuggestAuction) {
     setOpen(false)
-    navigate(`/auctions/${a.id}`)
+    navigate(`/auction/${a.id}`)
   }
 
   const flatCount = categories.length + auctions.length

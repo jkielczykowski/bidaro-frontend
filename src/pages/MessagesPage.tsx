@@ -25,7 +25,7 @@ function otherLastReadAt(c: Conversation, userId: string) {
 
 export function MessagesPage() {
   const { id } = useParams()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const { refresh: refreshUnread } = useUnreadMessages()
   const [conversations, setConversations] = useState<ConversationRow[]>([])
@@ -41,8 +41,8 @@ export function MessagesPage() {
   const openedRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!user) navigate('/login')
-  }, [user, navigate])
+    if (!authLoading && !user) navigate('/login')
+  }, [authLoading, user, navigate])
 
   async function loadConversations() {
     if (!user) return [] as ConversationRow[]
