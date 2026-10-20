@@ -65,11 +65,12 @@ export function AuctionDetailPage() {
 
     const { data: b } = await supabase
       .from('bids')
-      .select(`*, bidder:profiles!bids_bidder_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
+      .select(`id, auction_id, bidder_id, amount, created_at, bidder:profiles!bids_bidder_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
       .eq('auction_id', id)
-      .order('created_at', { ascending: false })
+      .order('amount', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(30)
-    setBids((b as Bid[]) ?? [])
+    setBids((b as unknown as Bid[]) ?? [])
 
     const auctionRow = a as Auction
     const min = minNextBid(
