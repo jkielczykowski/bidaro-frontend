@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 
-/** How long to hold a restored position while the page is still loading its content. */
-const RESTORE_TIMEOUT_MS = 3000
+/** Longest wait for a slow page (e.g. search results) to grow tall enough for the saved position. */
+const RESTORE_TIMEOUT_MS = 10000
+/** Once the position is reachable, keep holding it this long for late content (images, categories). */
+const SETTLE_MS = 1500
 
 /**
  * SPA scroll handling (BrowserRouter has none):
@@ -41,19 +43,26 @@ export function ScrollManager() {
     // Content above the fold (e.g. the category grid on the home page) loads after the restore;
     // with scroll anchoring the browser would push the view down by its height.
     root.style.overflowAnchor = 'none'
-    const apply = () => window.scrollTo(0, Math.min(target, Math.max(root.scrollHeight - window.innerHeight, 0)))
+    let settleTimer = 0
+    const apply = () => {
+      const max = Math.max(root.scrollHeight - window.innerHeight, 0)
+      window.scrollTo(0, Math.min(target, max))
+      // Reachable now: hold a little longer for late content, then let go
+      if (max >= target && !settleTimer) settleTimer = window.setTimeout(stop, SETTLE_MS)
+    }
     const resize = new ResizeObserver(apply)
     resize.observe(document.body)
-    apply()
 
-    const stop = () => {
+    function stop() {
+      window.clearTimeout(settleTimer)
       resize.disconnect()
       root.style.overflowAnchor = ''
       window.removeEventListener('wheel', stop)
       window.removeEventListener('touchstart', stop)
       window.removeEventListener('keydown', stop)
     }
-    // Keep the position while the page settles; the user scrolling themselves wins
+    apply()
+    // Keep the position while the page loads and settles; the user scrolling themselves wins
     const timer = window.setTimeout(stop, RESTORE_TIMEOUT_MS)
     window.addEventListener('wheel', stop, { passive: true })
     window.addEventListener('touchstart', stop, { passive: true })
