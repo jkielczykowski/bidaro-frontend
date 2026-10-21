@@ -1,32 +1,36 @@
-# React + TypeScript + Vite
+# bidaro-frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplikacja webowa Bidaro (React + Vite + TypeScript), serwowana przez nginx na VPS (kontener `bidaro-frontend`, port 9088).
 
-Currently, two official plugins are available:
+Część trzech repozytoriów:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Repo | Co |
+| --- | --- |
+| **bidaro-frontend** (to) | aplikacja webowa |
+| [bidaro-backend](https://github.com/jkielczykowski/bidaro-backend) | baza (Supabase), migracje, wyszukiwarka, maile/SMS, testy E2E |
+| [bidaro-app](https://github.com/jkielczykowski/bidaro-app) | aplikacja mobilna (Flutter) |
 
-## React Compiler
+## Lokalnie
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cp .env.example .env      # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+npm ci
+npm run dev               # http://localhost:5174
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`/api/search` w dev: `SEARCH_API_URL=http://127.0.0.1:9095 npm run dev` (lokalny `bidigo-search` z `bidaro-backend/e2e`).
+
+## Testy
+
+Pełne testy E2E (API + przeglądarka) są w `bidaro-backend/e2e` i uruchamiają ten web:
+
+```bash
+cd ../bidaro-backend/e2e && FRONTEND_DIR=../../bidaro-frontend npm test
+```
+
+`smoke/` — testy dymne żywej strony (tylko odczyt): `SMOKE_BASE_URL=http://72.61.177.37:9088 npm test --prefix smoke`.
+
+## Wdrożenie
+
+Push do `master` → GitHub Actions: build + lint → E2E → `deploy/deploy.sh` → testy dymne. Sekrety: `.github/SECRETS.md`.
+`landing/` — statyczna strona-wizytówka (wdrażana osobno).

@@ -1,9 +1,9 @@
 # Build React app
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY web/package*.json ./
+COPY package*.json ./
 RUN npm ci
-COPY web/ ./
+COPY . ./
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL

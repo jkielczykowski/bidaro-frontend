@@ -4,3 +4,6 @@
 dist
 node_modules
 .DS_Store
+smoke/node_modules
+smoke/report
+smoke/test-results
