@@ -50,6 +50,9 @@ echo "→ Syncing files to ${VPS_USER}@${VPS_HOST}:${REMOTE_DIR}"
 rsync -avz --delete \
   -e "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no" \
   --exclude .git \
+  --exclude .claude \
+  --exclude .github \
+  --exclude e2e \
   --exclude deploy \
   --exclude assets \
   --exclude mobile \
