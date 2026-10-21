@@ -32,5 +32,5 @@ cd ../bidaro-backend/e2e && FRONTEND_DIR=../../bidaro-frontend npm test
 
 ## Wdrożenie
 
-Push do `master` → GitHub Actions: build + lint → E2E → `deploy/deploy.sh` → testy dymne. Sekrety: `.github/SECRETS.md`.
+Push do `main` → GitHub Actions: build + lint → E2E → `deploy/deploy.sh` → testy dymne. Sekrety: `.github/SECRETS.md`.
 `landing/` — statyczna strona-wizytówka (wdrażana osobno).
