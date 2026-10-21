@@ -12,7 +12,7 @@ Lokalnie te same wartości trzymasz w `.env` (wzór: `.env.example`) — nigdy w
 | `VITE_SUPABASE_URL` | tak | `https://<REF>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | tak | Supabase → Project Settings → API → anon / publishable key (publiczny, trafia do przeglądarki) |
 | `VPS_SSH_KEY` | tak | **cały** prywatny klucz SSH do VPS (multiline), bez passphrase |
-| `BACKEND_REPO_TOKEN` | tak | GitHub → Settings → Developer settings → Fine-grained token: repo `bidaro-backend`, uprawnienie **Contents: Read-only**. Testy E2E są w backendzie |
+| `BACKEND_DEPLOY_KEY` | tak | prywatna część klucza wdrożeniowego (deploy key, tylko odczyt) repo `bidaro-backend` — testy E2E są w backendzie. Ustawia go `bash scripts/backend-deploy-key.sh` |
 | `VPS_HOST` | nie | domyślnie `72.61.177.37` |
 | `VPS_USERNAME` | nie | domyślnie `root` |
 

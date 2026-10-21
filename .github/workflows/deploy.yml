@@ -54,12 +54,13 @@ jobs:
         with:
           path: frontend
 
-      # The E2E suite, migrations and local stack live in the (private) backend repo
+      # The E2E suite, migrations and local stack live in the (private) backend repo;
+      # read through a read-only deploy key of bidaro-backend (scripts/backend-deploy-key.sh)
       - name: Checkout bidaro-backend
         uses: actions/checkout@v4
         with:
           repository: ${{ env.BACKEND_REPO }}
-          token: ${{ secrets.BACKEND_REPO_TOKEN }}
+          ssh-key: ${{ secrets.BACKEND_DEPLOY_KEY }}
           path: backend
 
       - name: Setup Node
