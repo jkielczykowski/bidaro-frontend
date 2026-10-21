@@ -4,7 +4,7 @@ import { LocationMapView } from '../components/LocationMap'
 import { Modal } from '../components/Modal'
 import { useAuth } from '../lib/auth'
 import type { Auction, AuctionComment, Bid, SellerNote, SellerRating } from '../lib/database.types'
-import { bidLabel, formatPln, formatRemaining, minNextBid } from '../lib/format'
+import { bidLabel, formatEndsAt, formatPln, formatRemaining, minNextBid } from '../lib/format'
 import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
 
 function formatSellerRating(avg?: number | null, count?: number | null) {
@@ -417,6 +417,7 @@ export function AuctionDetailPage() {
               </span>
             )}
             <span className="timer big">{formatRemaining(auction.ends_at, now)}</span>
+            {live && <span className="timer-ends muted">Koniec: {formatEndsAt(auction.ends_at, now)}</span>}
           </div>
           <h1>{auction.title}</h1>
           {pendingReview && (isSeller || isAdmin) && (

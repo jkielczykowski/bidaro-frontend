@@ -26,19 +26,36 @@ export function formatRemaining(endsAt: string, now = Date.now()) {
   const h = Math.floor((totalSec % 86400) / 3600)
   const m = Math.floor((totalSec % 3600) / 60)
   const s = totalSec % 60
-  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (d > 0) return `${d} ${d === 1 ? 'dzień' : 'dni'} ${h} godz.`
   return [h, m, s].map((x) => String(x).padStart(2, '0')).join(':')
 }
 
-/** HH:MM:SS countdown for Bidigo home cards */
+/** Home-card countdown: "3 dni 8 godz." while a day or more is left, then HH:MM:SS */
 export function formatCountdown(endsAt: string, now = Date.now()) {
   const ms = new Date(endsAt).getTime() - now
   if (ms <= 0) return '00:00:00'
   const totalSec = Math.floor(ms / 1000)
-  const h = Math.floor(totalSec / 3600)
+  const d = Math.floor(totalSec / 86400)
+  const h = Math.floor((totalSec % 86400) / 3600)
+  if (d > 0) return `${d} ${d === 1 ? 'dzień' : 'dni'} ${h} godz.`
   const m = Math.floor((totalSec % 3600) / 60)
   const s = totalSec % 60
   return [h, m, s].map((x) => String(x).padStart(2, '0')).join(':')
+}
+
+/** End moment in Polish time: "24.10, 23:59" (year only when it differs from now) */
+export function formatEndsAt(endsAt: string, now = Date.now()) {
+  const end = new Date(endsAt)
+  const sameYear = end.getFullYear() === new Date(now).getFullYear()
+  return end
+    .toLocaleString('pl-PL', {
+      timeZone: 'Europe/Warsaw',
+      day: '2-digit',
+      month: '2-digit',
+      ...(sameYear ? {} : { year: 'numeric' }),
+      hour: '2-digit',
+      minute: '2-digit',
+    })
 }
 
 export function ofertLabel(count: number | null | undefined) {

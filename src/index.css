@@ -2525,6 +2525,12 @@ select {
   font-weight: 700;
 }
 
+.bg-card-meta .bg-card-ends {
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .bg-card-btn {
   margin-top: auto;
   width: 100%;
@@ -5354,4 +5360,15 @@ a.nav-user:hover {
 .legal-body a {
   color: var(--accent);
   font-weight: 600;
+}
+
+.auction-card-ends {
+  font-weight: 500;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.timer-ends {
+  font-size: 0.9rem;
+  white-space: nowrap;
 }

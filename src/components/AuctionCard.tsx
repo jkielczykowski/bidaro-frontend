@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import type { Auction } from '../lib/database.types'
-import { bidLabel, formatPln, formatRemaining } from '../lib/format'
+import { bidLabel, formatEndsAt, formatPln, formatRemaining } from '../lib/format'
 
 export function AuctionCard({ auction }: { auction: Auction }) {
   const [now, setNow] = useState(Date.now())
@@ -37,6 +37,7 @@ export function AuctionCard({ auction }: { auction: Auction }) {
         )}
         <span className={`auction-card-timer${soon ? ' is-soon' : ''}`}>
           {formatRemaining(auction.ends_at, now)}
+          {live && <span className="auction-card-ends"> · do {formatEndsAt(auction.ends_at, now)}</span>}
         </span>
       </div>
       <div className="auction-card-body">

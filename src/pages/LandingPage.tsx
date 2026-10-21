@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { CategoryBrowse } from '../components/CategoryBrowse'
 import type { Auction, Category } from '../lib/database.types'
-import { formatCountdown, formatPln, ofertLabel } from '../lib/format'
+import { formatCountdown, formatEndsAt, formatPln, ofertLabel } from '../lib/format'
 import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
 
 type LiveFilter = 'all' | 'bid' | 'buy'
@@ -145,7 +145,14 @@ function HomeAuctionCard({ auction, demo }: { auction: DemoAuction; demo?: boole
         </div>
         <div className="bg-card-meta">
           <span className={buyNowOnly ? '' : 'is-urgent'}>
-            {buyNowOnly ? 'Dostępny od ręki' : `⏱ ${formatCountdown(auction.ends_at, now)}`}
+            {buyNowOnly ? (
+              'Dostępny od ręki'
+            ) : (
+              <>
+                ⏱ {formatCountdown(auction.ends_at, now)}
+                <span className="bg-card-ends"> · do {formatEndsAt(auction.ends_at, now)}</span>
+              </>
+            )}
           </span>
           <span>📍 {auction.city || 'Polska'}</span>
         </div>
