@@ -20,6 +20,10 @@ VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-}"
 VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-}"
 SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
 RESEND_API_KEY="${RESEND_API_KEY:-}"
+SMTP_HOST="${SMTP_HOST:-}"
+SMTP_PORT="${SMTP_PORT:-587}"
+SMTP_USERNAME="${SMTP_USERNAME:-}"
+SMTP_PASSWORD="${SMTP_PASSWORD:-}"
 MAIL_FROM="${MAIL_FROM:-Bidigo <onboarding@resend.dev>}"
 SMSPLANET_API_TOKEN="${SMSPLANET_API_TOKEN:-}"
 SMSPLANET_FROM="${SMSPLANET_FROM:-TEST}"
@@ -34,8 +38,8 @@ if [[ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]]; then
   echo "Missing SUPABASE_SERVICE_ROLE_KEY (needed for mail worker / search) — set in web/.env"
 fi
 
-if [[ -z "${RESEND_API_KEY}" ]]; then
-  echo "⚠ RESEND_API_KEY not set — mail worker will mark emails skipped until you add it to web/.env"
+if [[ -z "${SMTP_HOST}" && -z "${RESEND_API_KEY}" ]]; then
+  echo "⚠ SMTP_HOST / RESEND_API_KEY not set — mail worker will mark emails skipped until you add them"
 fi
 
 if [[ -z "${SMSPLANET_API_TOKEN}" ]]; then
@@ -60,6 +64,7 @@ rsync -avz --delete \
   --exclude web/dist \
   --exclude web/.env \
   --exclude search/node_modules \
+  --exclude mail/node_modules \
   --exclude search/.env \
   --exclude landing \
   "${ROOT}/" \
@@ -96,6 +101,10 @@ HOST_HTTP_PORT=${HOST_HTTP_PORT}
 SUPABASE_URL=${VITE_SUPABASE_URL}
 SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
 RESEND_API_KEY=${RESEND_API_KEY:-}
+SMTP_HOST=${SMTP_HOST}
+SMTP_PORT=${SMTP_PORT}
+SMTP_USERNAME=${SMTP_USERNAME}
+SMTP_PASSWORD=${SMTP_PASSWORD}
 MAIL_FROM=${MAIL_FROM:-Bidigo <onboarding@resend.dev>}
 SMSPLANET_API_TOKEN=${SMSPLANET_API_TOKEN:-}
 SMSPLANET_FROM=${SMSPLANET_FROM:-TEST}
@@ -122,6 +131,10 @@ services:
       SUPABASE_URL: \${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: \${SUPABASE_SERVICE_ROLE_KEY}
       RESEND_API_KEY: \${RESEND_API_KEY}
+      SMTP_HOST: \${SMTP_HOST}
+      SMTP_PORT: \${SMTP_PORT}
+      SMTP_USERNAME: \${SMTP_USERNAME}
+      SMTP_PASSWORD: \${SMTP_PASSWORD}
       MAIL_FROM: \${MAIL_FROM}
       SMSPLANET_API_TOKEN: \${SMSPLANET_API_TOKEN}
       SMSPLANET_FROM: \${SMSPLANET_FROM}
