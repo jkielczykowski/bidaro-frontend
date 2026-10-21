@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LocationMapView } from '../components/LocationMap'
 import { Modal } from '../components/Modal'
@@ -20,6 +20,8 @@ export function AuctionDetailPage() {
   const [auction, setAuction] = useState<Auction | null>(null)
   const [bids, setBids] = useState<Bid[]>([])
   const [amount, setAmount] = useState('')
+  // Once the user types a bid, reloads (realtime, double effect) must not replace it with the minimum
+  const amountTouched = useRef(false)
   const [maxAmount, setMaxAmount] = useState('')
   const [useProxy, setUseProxy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +81,7 @@ export function AuctionDetailPage() {
       Number(auctionRow.bid_increment),
       Number(auctionRow.bid_count),
     )
-    setAmount(String(min))
+    if (!amountTouched.current) setAmount(String(min))
 
     const { data: ratingRow } = await supabase
       .from('seller_ratings')
@@ -302,6 +304,7 @@ export function AuctionDetailPage() {
         p_max_amount: useProxy && maxAmount ? Number(maxAmount) : null,
       })
       if (err) throw err
+      amountTouched.current = false // bid placed — show the next minimum again
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nie udało się złożyć oferty')
@@ -514,7 +517,10 @@ export function AuctionDetailPage() {
                       step="1"
                       required={!useProxy}
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => {
+                        amountTouched.current = true
+                        setAmount(e.target.value)
+                      }}
                       disabled={useProxy}
                     />
                   </label>
