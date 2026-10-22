@@ -87,9 +87,19 @@ jobs:
           npm run db:start
           node scripts/db-load.mjs
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Start local OpenSearch + bidigo-search
         working-directory: backend/e2e
         run: npm run search:start
+
+      - name: Start bidaro-api (Java) against the local stack
+        working-directory: backend/e2e
+        run: npm run api:start
 
       - name: Run E2E tests against this web build
         working-directory: backend/e2e
