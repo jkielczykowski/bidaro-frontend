@@ -100,25 +100,18 @@ export function AuctionDetailPage() {
   useEffect(() => {
     void load()
     if (!id) return
+    // One broadcast per change on this auction (bid, question, status) from the database
+    // (bidaro-backend V33). A burst of events (proxy auto-bids) triggers a single reload.
+    let reloadTimer = 0
     const channel = supabase
-      .channel(`auction-${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'auctions', filter: `id=eq.${id}` },
-        () => void load(),
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'bids', filter: `auction_id=eq.${id}` },
-        () => void load(),
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'auction_comments', filter: `auction_id=eq.${id}` },
-        () => void load(),
-      )
+      .channel(`auction:${id}`)
+      .on('broadcast', { event: 'changed' }, () => {
+        window.clearTimeout(reloadTimer)
+        reloadTimer = window.setTimeout(() => void load(), 250)
+      })
       .subscribe()
     return () => {
+      window.clearTimeout(reloadTimer)
       void supabase.removeChannel(channel)
     }
   }, [id])
