@@ -164,9 +164,21 @@ function HomeAuctionCard({ auction, demo }: { auction: DemoAuction; demo?: boole
   )
 }
 
+// Categories barely change: show the last known list at once, refresh it in the background
+const CATEGORIES_CACHE_KEY = 'bidaro:categories:v1'
+
+function cachedCategories(): Category[] {
+  try {
+    const raw = localStorage.getItem(CATEGORIES_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as Category[]) : []
+  } catch {
+    return []
+  }
+}
+
 export function LandingPage() {
   const [featured, setFeatured] = useState<DemoAuction[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [categories, setCategories] = useState<Category[]>(cachedCategories)
   const [usingDemo, setUsingDemo] = useState(false)
   const [filter, setFilter] = useState<LiveFilter>('all')
 
@@ -175,19 +187,33 @@ export function LandingPage() {
     return () => document.body.classList.remove('on-home')
   }, [])
 
+  // Independent of the auctions below — don't wait for close_expired_auctions
+  useEffect(() => {
+    void supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order')
+      .then(({ data }) => {
+        if (!data) return
+        setCategories(data as Category[])
+        try {
+          localStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(data))
+        } catch {
+          // storage full / blocked: the list just loads from the network next time
+        }
+      })
+  }, [])
+
   useEffect(() => {
     void (async () => {
       await supabase.rpc('close_expired_auctions')
-      const [{ data }, { data: cats }] = await Promise.all([
-        supabase
-          .from('auctions')
-          .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
-          .eq('status', 'active')
-          .eq('moderation_status', 'approved')
-          .order('ends_at', { ascending: true })
-          .limit(6),
-        supabase.from('categories').select('*').order('sort_order'),
-      ])
+      const { data } = await supabase
+        .from('auctions')
+        .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
+        .eq('status', 'active')
+        .eq('moderation_status', 'approved')
+        .order('ends_at', { ascending: true })
+        .limit(6)
       const live = (data as Auction[]) ?? []
       if (live.length > 0) {
         setFeatured(live)
@@ -196,7 +222,6 @@ export function LandingPage() {
         setFeatured(mockAuctions())
         setUsingDemo(true)
       }
-      setCategories((cats as Category[]) ?? [])
     })()
   }, [])
 
