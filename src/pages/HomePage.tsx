@@ -10,7 +10,7 @@ import { SearchBar } from '../components/SearchBar'
 import type { Auction, Category } from '../lib/database.types'
 import { geocodeCity } from '../lib/cities'
 import { fetchSearch } from '../lib/searchApi'
-import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
+import { AUCTION_CARD_COLUMNS, supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 12
 // FluffyTag-style radius options
@@ -127,7 +127,6 @@ export function HomePage() {
     async function load() {
       setLoading(true)
       setError(null)
-      await supabase.rpc('close_expired_auctions')
 
       const offset = (page - 1) * PAGE_SIZE
       try {
@@ -196,7 +195,7 @@ export function HomePage() {
 
         const { data, error: err } = await supabase
           .from('auctions')
-          .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
+          .select(AUCTION_CARD_COLUMNS)
           .in('id', ids)
 
         if (cancelled) return
@@ -204,7 +203,7 @@ export function HomePage() {
           setError(err.message)
           setAuctions([])
         } else {
-          const byId = new Map(((data as Auction[]) ?? []).map((a) => [a.id, a]))
+          const byId = new Map(((data as unknown as Auction[]) ?? []).map((a) => [a.id, a]))
           setAuctions(ids.map((id) => byId.get(id)).filter(Boolean) as Auction[])
         }
       } catch (e) {

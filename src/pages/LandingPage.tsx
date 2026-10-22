@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CategoryBrowse } from '../components/CategoryBrowse'
 import type { Auction, Category } from '../lib/database.types'
 import { formatCountdown, formatEndsAt, formatPln, ofertLabel } from '../lib/format'
-import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
+import { AUCTION_CARD_COLUMNS, supabase } from '../lib/supabase'
 
 type LiveFilter = 'all' | 'bid' | 'buy'
 
@@ -187,7 +187,7 @@ export function LandingPage() {
     return () => document.body.classList.remove('on-home')
   }, [])
 
-  // Independent of the auctions below — don't wait for close_expired_auctions
+  // Independent of the auctions below
   useEffect(() => {
     void supabase
       .from('categories')
@@ -206,15 +206,14 @@ export function LandingPage() {
 
   useEffect(() => {
     void (async () => {
-      await supabase.rpc('close_expired_auctions')
       const { data } = await supabase
         .from('auctions')
-        .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)
+        .select(AUCTION_CARD_COLUMNS)
         .eq('status', 'active')
         .eq('moderation_status', 'approved')
         .order('ends_at', { ascending: true })
         .limit(6)
-      const live = (data as Auction[]) ?? []
+      const live = (data as unknown as Auction[]) ?? []
       if (live.length > 0) {
         setFeatured(live)
         setUsingDemo(false)

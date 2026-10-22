@@ -17,3 +17,7 @@ export const supabase = createClient(url, key, {
 /** Public profile columns — `phone` is not readable by clients (own profile: rpc('my_profile')). */
 export const PUBLIC_PROFILE_COLUMNS =
   'id, username, display_name, city, avatar_url, bio, rating_avg, rating_count, is_admin, phone_verified_at, created_at, updated_at'
+
+/** Columns an auction card (home page, search results) actually renders — not whole rows. */
+export const AUCTION_CARD_COLUMNS =
+  'id, title, image_urls, current_price, starting_price, buy_now_price, bid_count, ends_at, city, status, moderation_status, category_id, seller_id, category:categories(id, name, icon, parent_id)'

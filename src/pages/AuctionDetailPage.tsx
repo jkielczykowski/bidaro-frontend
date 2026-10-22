@@ -52,7 +52,6 @@ export function AuctionDetailPage() {
 
   async function load() {
     if (!id) return
-    await supabase.rpc('close_expired_auctions')
     const { data: a, error: aErr } = await supabase
       .from('auctions')
       .select(`*, category:categories(*), seller:profiles!auctions_seller_id_fkey(${PUBLIC_PROFILE_COLUMNS})`)

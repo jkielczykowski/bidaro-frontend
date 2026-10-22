@@ -22,7 +22,6 @@ export function MyBiddingPage() {
     if (!user) return
     async function loadIds() {
       setLoading(true)
-      await supabase.rpc('close_expired_auctions')
       const { data: myBids } = await supabase.from('bids').select('auction_id').eq('bidder_id', user!.id)
       const ids = [...new Set((myBids ?? []).map((b: { auction_id: string }) => b.auction_id))]
       setBidAuctionIds(ids)

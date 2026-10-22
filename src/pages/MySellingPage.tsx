@@ -32,7 +32,6 @@ export function MySellingPage() {
     if (!user) return
     async function loadSelling() {
       setLoading(true)
-      await supabase.rpc('close_expired_auctions')
       const from = (sellingPage - 1) * PAGE_SIZE
       const to = from + PAGE_SIZE - 1
       const { data, count } = await supabase
