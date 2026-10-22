@@ -2,6 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useAuth } from './auth'
 import { supabase } from './supabase'
 
+/** Badge refresh interval; each open tab of a signed-in user polls this often */
+const POLL_MS = 30_000
+
 type UnreadCtx = {
   unread: number
   refresh: () => Promise<number>
@@ -39,10 +42,18 @@ export function UnreadMessagesProvider({ children }: { children: React.ReactNode
       return
     }
     void refresh()
+    // Poll only while the tab is visible, and catch up as soon as it is shown again
     const t = window.setInterval(() => {
-      void refresh()
-    }, 15000)
-    return () => window.clearInterval(t)
+      if (document.visibilityState === 'visible') void refresh()
+    }, POLL_MS)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [user, refresh])
 
   const value = useMemo(() => ({ unread, refresh }), [unread, refresh])
