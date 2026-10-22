@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { RedirectAuction, RedirectAuctionEdit, RedirectMessage } from './components/LegacyRedirects'
 import { Layout } from './components/Layout'
@@ -5,24 +6,33 @@ import { ScrollManager } from './components/ScrollManager'
 import { AuthProvider } from './lib/auth'
 import { NotificationsProvider } from './lib/notifications'
 import { UnreadMessagesProvider } from './lib/unreadMessages'
-import { AuctionDetailPage } from './pages/AuctionDetailPage'
-import { LoginPage, RegisterPage } from './pages/AuthPages'
-import { CreateAuctionPage } from './pages/CreateAuctionPage'
-import { VerifyPhonePage } from './pages/VerifyPhonePage'
-import { EditAuctionPage } from './pages/EditAuctionPage'
-import { HomePage } from './pages/HomePage'
 import { LandingPage } from './pages/LandingPage'
-import { MessagesPage } from './pages/MessagesPage'
-import { MyActivityPage } from './pages/MyActivityPage'
-import { MyBiddingPage } from './pages/MyBiddingPage'
-import { MyFeesPage } from './pages/MyFeesPage'
-import { MyHubPage } from './pages/MyHubPage'
-import { MySellingPage } from './pages/MySellingPage'
-import { NotificationsPage } from './pages/NotificationsPage'
-import { AdminModerationPage } from './pages/AdminModerationPage'
-import { ProfileSettingsPage } from './pages/ProfileSettingsPage'
-import { PrivacyPolicyPage, TermsPage, SupportPage, AccountDeletionPage } from './pages/LegalPages'
 import './index.css'
+
+// The home page ships in the main bundle; every other page loads when first visited
+const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })))
+
+const AuctionDetailPage = page(() => import('./pages/AuctionDetailPage'), 'AuctionDetailPage')
+const CreateAuctionPage = page(() => import('./pages/CreateAuctionPage'), 'CreateAuctionPage')
+const VerifyPhonePage = page(() => import('./pages/VerifyPhonePage'), 'VerifyPhonePage')
+const EditAuctionPage = page(() => import('./pages/EditAuctionPage'), 'EditAuctionPage')
+const HomePage = page(() => import('./pages/HomePage'), 'HomePage')
+const MessagesPage = page(() => import('./pages/MessagesPage'), 'MessagesPage')
+const MyActivityPage = page(() => import('./pages/MyActivityPage'), 'MyActivityPage')
+const MyBiddingPage = page(() => import('./pages/MyBiddingPage'), 'MyBiddingPage')
+const MyFeesPage = page(() => import('./pages/MyFeesPage'), 'MyFeesPage')
+const MyHubPage = page(() => import('./pages/MyHubPage'), 'MyHubPage')
+const MySellingPage = page(() => import('./pages/MySellingPage'), 'MySellingPage')
+const NotificationsPage = page(() => import('./pages/NotificationsPage'), 'NotificationsPage')
+const AdminModerationPage = page(() => import('./pages/AdminModerationPage'), 'AdminModerationPage')
+const ProfileSettingsPage = page(() => import('./pages/ProfileSettingsPage'), 'ProfileSettingsPage')
+const LoginPage = page(() => import('./pages/AuthPages'), 'LoginPage')
+const RegisterPage = page(() => import('./pages/AuthPages'), 'RegisterPage')
+const PrivacyPolicyPage = page(() => import('./pages/LegalPages'), 'PrivacyPolicyPage')
+const TermsPage = page(() => import('./pages/LegalPages'), 'TermsPage')
+const SupportPage = page(() => import('./pages/LegalPages'), 'SupportPage')
+const AccountDeletionPage = page(() => import('./pages/LegalPages'), 'AccountDeletionPage')
 
 export default function App() {
   return (
@@ -32,6 +42,7 @@ export default function App() {
           <BrowserRouter>
             <ScrollManager />
             <Layout>
+              <Suspense fallback={<div className="page-loading" aria-busy="true" />}>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auctions" element={<HomePage />} />
@@ -77,6 +88,7 @@ export default function App() {
                 <Route path="/regulamin" element={<Navigate to="/terms" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
             </Layout>
           </BrowserRouter>
         </NotificationsProvider>
