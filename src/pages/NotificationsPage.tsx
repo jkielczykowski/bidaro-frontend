@@ -21,6 +21,7 @@ export type AppNotification = {
     | 'auction_comment'
     | 'fee_due'
     | 'fee_overdue'
+    | 'fee_settlement'
   title: string
   body: string
   auction_id: string | null
@@ -67,6 +68,8 @@ function typeLabel(type: AppNotification['type']) {
       return 'Prowizja'
     case 'fee_overdue':
       return 'Blokada'
+    case 'fee_settlement':
+      return 'Rozliczenie'
     default:
       return 'Info'
   }
@@ -244,7 +247,7 @@ export function NotificationsPage() {
                 <strong className="notif-title">{n.title}</strong>
                 <p className="notif-body">{n.body}</p>
                 <div className="notif-actions">
-                  {(n.type === 'fee_due' || n.type === 'fee_overdue') && (
+                  {(n.type === 'fee_due' || n.type === 'fee_overdue' || n.type === 'fee_settlement') && (
                     <Link
                       to="/my/fees?status=pending"
                       className="btn btn-primary btn-sm"

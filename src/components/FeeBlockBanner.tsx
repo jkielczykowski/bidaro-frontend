@@ -31,7 +31,7 @@ export function FeeBlockBanner({ block, onPay, paying, showDueSoon }: Props) {
         <div>
           <p className="fee-block-banner-title">Konto zablokowane — zaległa prowizja {formatPln(block.overdue_amount)}</p>
           <p className="fee-block-banner-body">
-            Prowizję płaci się w ciągu {block.payment_days} dni od sprzedaży. Do czasu zapłaty nie możesz licytować,
+            Rozliczenie prowizji płaci się w ciągu {block.payment_days} dni od jego wystawienia. Do czasu zapłaty nie możesz licytować,
             kupować przez „Kup teraz” ani wystawiać aukcji. Blokada zniknie od razu po płatności.
           </p>
         </div>

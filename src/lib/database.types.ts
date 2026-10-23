@@ -35,7 +35,22 @@ export type SellerFee = {
   fee_amount: number
   status: 'pending' | 'paid' | 'cancelled' | 'waived'
   created_at: string
-  /** 14 days after the sale; past it the account is blocked until the fee is paid */
+  /** Settlement (rozliczenie) the fee is paid in; null until the fees are settled */
+  settlement_id: string | null
+  /** 14 days after its settlement was issued (null before); past it the account is blocked */
+  due_at: string | null
+  paid_at: string | null
+}
+
+/** Fees are paid in settlements: at 20 zł, on the 1st of the month, or on request — one payment each */
+export type FeeSettlement = {
+  id: string
+  number: string
+  reason: 'threshold' | 'monthly' | 'on_request'
+  amount: number
+  fee_count: number
+  status: 'pending' | 'paid' | 'cancelled'
+  issued_at: string
   due_at: string
   paid_at: string | null
 }

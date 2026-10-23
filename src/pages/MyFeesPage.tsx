@@ -3,13 +3,16 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { FeeBlockBanner } from '../components/FeeBlockBanner'
 import { Pagination } from '../components/Pagination'
 import { useAuth } from '../lib/auth'
-import { ApiError, startFeeCheckout } from '../lib/bidigoApi'
-import type { SellerFee } from '../lib/database.types'
+import { ApiError, startSettlementCheckout } from '../lib/bidigoApi'
+import type { FeeSettlement, SellerFee } from '../lib/database.types'
 import { useFeeBlock } from '../lib/feeBlock'
 import { formatPln } from '../lib/format'
 import { supabase } from '../lib/supabase'
 
-type FeeRow = SellerFee & { auction?: { title: string } | null }
+type FeeRow = SellerFee & {
+  auction?: { title: string } | null
+  settlement?: { number: string } | null
+}
 
 const PAGE_SIZE = 12
 /** Unpaid fees are debts: all of them stay on top, unpaginated (up to this many) */
@@ -59,6 +62,8 @@ const STATUS_LABEL: Record<SellerFee['status'], string> = {
   waived: 'Umorzona',
 }
 
+const SETTLE_NOW = 'now'
+
 function FeeDue({ dueAt }: { dueAt: string }) {
   const due = new Date(dueAt)
   const overdue = due.getTime() <= Date.now()
@@ -71,6 +76,9 @@ function FeeDue({ dueAt }: { dueAt: string }) {
 
 export function MyFeesPage() {
   const { user } = useAuth()
+  const [settlements, setSettlements] = useState<FeeSettlement[]>([])
+  const [unsettledTotal, setUnsettledTotal] = useState(0)
+  const [unsettledCount, setUnsettledCount] = useState(0)
   const [pendingFees, setPendingFees] = useState<FeeRow[]>([])
   const [settledFees, setSettledFees] = useState<FeeRow[]>([])
   const [settledTotal, setSettledTotal] = useState(0)
@@ -82,7 +90,7 @@ export function MyFeesPage() {
   const [payError, setPayError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const { block, reload: reloadBlock } = useFeeBlock()
-  // Stripe Checkout sends the seller back here with ?paid=<fee id> or ?cancelled=<fee id>
+  // Stripe Checkout sends the seller back here with ?paid=<settlement id> or ?cancelled=<settlement id>
   // Filters and page live in the URL (?status=&q=&from=&to=&page=), so a refresh keeps them
   const [params, setParams] = useSearchParams()
   const returnedPaid = params.get('paid')
@@ -124,11 +132,19 @@ export function MyFeesPage() {
     if (!user) return
     setLoading(true)
     const f: Filters = { status, q, from, to }
-    const select = f.q.trim() ? '*, auction:auctions!inner(title)' : '*, auction:auctions(title)'
+    const auction = f.q.trim() ? 'auction:auctions!inner(title)' : 'auction:auctions(title)'
+    const select = `*, ${auction}, settlement:fee_settlements(number)`
 
-    const [{ data: pendingAll }, { count: everything }, pendingRes, settledRes] = await Promise.all([
+    const [{ data: openSettlements }, { data: pendingAll }, { count: everything }, pendingRes, settledRes] = await Promise.all([
+      // Settlements to pay, oldest due first — never filtered
+      supabase
+        .from('fee_settlements')
+        .select('*')
+        .eq('seller_id', user.id)
+        .eq('status', 'pending')
+        .order('due_at', { ascending: true }),
       // Summary: everything still owed, regardless of the filters
-      supabase.from('seller_fees').select('fee_amount').eq('seller_id', user.id).eq('status', 'pending'),
+      supabase.from('seller_fees').select('fee_amount, settlement_id').eq('seller_id', user.id).eq('status', 'pending'),
       supabase.from('seller_fees').select('id', { count: 'exact', head: true }).eq('seller_id', user.id),
       f.status === 'paid'
         ? Promise.resolve({ data: [] })
@@ -151,7 +167,11 @@ export function MyFeesPage() {
             .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
     ])
 
-    const owed = (pendingAll ?? []) as { fee_amount: number }[]
+    const owed = (pendingAll ?? []) as { fee_amount: number; settlement_id: string | null }[]
+    const unsettled = owed.filter((x) => !x.settlement_id)
+    setSettlements((openSettlements as FeeSettlement[] | null) ?? [])
+    setUnsettledCount(unsettled.length)
+    setUnsettledTotal(unsettled.reduce((s, x) => s + Number(x.fee_amount), 0))
     setPendingCount(owed.length)
     setPendingTotal(owed.reduce((s, x) => s + Number(x.fee_amount), 0))
     setAllCount(everything ?? 0)
@@ -175,7 +195,7 @@ export function MyFeesPage() {
     let stopped = false
     let tries = 0
     const check = async () => {
-      const { data } = await supabase.from('seller_fees').select('status').eq('id', returnedPaid).maybeSingle()
+      const { data } = await supabase.from('fee_settlements').select('status').eq('id', returnedPaid).maybeSingle()
       if (stopped) return
       if (data?.status === 'paid') {
         setConfirmed(true)
@@ -191,17 +211,24 @@ export function MyFeesPage() {
     }
   }, [returnedPaid, user, load, reloadBlock])
 
-  async function pay(feeId: string) {
-    setPaying(feeId)
+  /** One Stripe payment for a whole settlement; SETTLE_NOW first settles everything not settled yet */
+  async function pay(settlementId: string) {
+    setPaying(settlementId)
     setPayError(null)
     try {
-      const { checkoutUrl } = await startFeeCheckout(feeId)
+      let id = settlementId
+      if (id === SETTLE_NOW) {
+        const { data, error } = await supabase.rpc('settle_my_fees')
+        if (error || !data) throw error ?? new Error('Nothing to settle')
+        id = data as string
+      }
+      const { checkoutUrl } = await startSettlementCheckout(id)
       window.location.assign(checkoutUrl)
     } catch (e) {
       setPaying(null)
       const status = e instanceof ApiError ? e.status : 0
       if (status === 409) {
-        setPayError('Ta prowizja jest już rozliczona.')
+        setPayError('To rozliczenie jest już opłacone.')
         void load()
       } else if (status === 503) {
         setPayError('Płatności są chwilowo niedostępne. Spróbuj później.')
@@ -211,11 +238,8 @@ export function MyFeesPage() {
     }
   }
 
-  // The banner's "Zapłać" pays the unpaid fee past or nearest its due date
-  const oldestPending = pendingFees.reduce<FeeRow | null>(
-    (oldest, f) => (!oldest || f.due_at < oldest.due_at ? f : oldest),
-    null,
-  )
+  // The banner's "Zapłać" pays the settlement past or nearest its due date (sorted by due date)
+  const nextSettlement = settlements[0] ?? null
 
   function goPage(p: number) {
     setParam({ page: String(Math.min(Math.max(1, p), pageCount)) })
@@ -249,20 +273,43 @@ export function MyFeesPage() {
         <p className="my-fee-amount">{formatPln(f.fee_amount)}</p>
         {!settled && f.due_at && <FeeDue dueAt={f.due_at} />}
         {!settled ? (
-          <button
-            type="button"
-            className="btn btn-primary my-fee-pay"
-            disabled={paying !== null}
-            onClick={() => void pay(f.id)}
-          >
-            {paying === f.id ? 'Przekierowanie…' : `Zapłać ${formatPln(f.fee_amount)}`}
-          </button>
+          <p className="my-card-body muted my-fee-settlement-ref">
+            {f.settlement ? `W rozliczeniu ${f.settlement.number}` : 'Czeka na rozliczenie'}
+          </p>
         ) : f.status === 'paid' && f.paid_at ? (
           <p className="my-card-body my-fee-paid-on">Opłacono {new Date(f.paid_at).toLocaleDateString('pl-PL')}</p>
         ) : null}
       </article>
     )
   }
+
+  function settlementCard(s: FeeSettlement): ReactNode {
+    return (
+      <article key={s.id} className="my-card my-card-warn my-settlement-card" data-settlement={s.number}>
+        <div className="my-card-top">
+          <p className="my-card-kicker">Rozliczenie prowizji</p>
+          <span className="fee-status pending">Do zapłaty</span>
+        </div>
+        <h3 className="my-card-title">{s.number}</h3>
+        <p className="my-card-body muted">
+          {s.fee_count} {s.fee_count === 1 ? 'prowizja' : plural(s.fee_count).replace('pozycj', 'prowizj')} · wystawione{' '}
+          {new Date(s.issued_at).toLocaleDateString('pl-PL')}
+        </p>
+        <p className="my-fee-amount">{formatPln(s.amount)}</p>
+        <FeeDue dueAt={s.due_at} />
+        <button
+          type="button"
+          className="btn btn-primary my-fee-pay"
+          disabled={paying !== null}
+          onClick={() => void pay(s.id)}
+        >
+          {paying === s.id ? 'Przekierowanie…' : `Zapłać ${formatPln(s.amount)}`}
+        </button>
+      </article>
+    )
+  }
+
+  const threshold = block?.settlement_threshold ?? 20
 
   if (!user) {
     return (
@@ -284,13 +331,14 @@ export function MyFeesPage() {
       </div>
 
       <p className="muted my-section-count">
-        Niskie prowizje: 3–5% (min. 2 zł). Każda sprzedaż na osobnym kafelku — opłacisz ją kartą przez Stripe.
+        Niskie prowizje: 3–5% (min. 2 zł). Płacisz je zbiorczo, jedną płatnością przez Stripe: rozliczenie wystawiamy,
+        gdy prowizje dojdą do {formatPln(threshold)}, albo 1. dnia miesiąca — masz wtedy 14 dni na zapłatę.
       </p>
 
       {returnedPaid &&
         (confirmed ? (
           <p className="success my-fee-notice" role="status">
-            Dziękujemy — prowizja opłacona.
+            Dziękujemy — rozliczenie opłacone.
           </p>
         ) : (
           <p className="muted my-fee-notice" role="status">
@@ -299,7 +347,7 @@ export function MyFeesPage() {
         ))}
       {returnedCancelled && !returnedPaid && (
         <p className="muted my-fee-notice" role="status">
-          Płatność przerwana — prowizja nadal czeka na opłacenie.
+          Płatność przerwana — rozliczenie nadal czeka na opłacenie.
         </p>
       )}
       {payError && (
@@ -311,7 +359,7 @@ export function MyFeesPage() {
       <FeeBlockBanner
         block={block}
         showDueSoon
-        onPay={oldestPending ? () => void pay(oldestPending.id) : undefined}
+        onPay={nextSettlement ? () => void pay(nextSettlement.id) : undefined}
         paying={paying !== null}
       />
 
@@ -324,6 +372,41 @@ export function MyFeesPage() {
           <p className="muted">
             {pendingCount} {plural(pendingCount)} oczekujących
           </p>
+        </div>
+      )}
+
+      {settlements.length > 0 && (
+        <section className="my-fee-section my-fee-settlements" aria-labelledby="fees-settlements">
+          <h2 id="fees-settlements" className="my-fee-section-title">
+            Rozliczenia do zapłaty <span className="muted">· {settlements.length}</span>
+          </h2>
+          <div className="my-card-grid">{settlements.map(settlementCard)}</div>
+        </section>
+      )}
+
+      {unsettledCount > 0 && (
+        <div className="my-fee-unsettled" data-testid="fees-unsettled">
+          <div>
+            <p className="my-card-kicker">Czeka na rozliczenie</p>
+            <p className="my-fee-unsettled-amount">
+              {formatPln(unsettledTotal)}{' '}
+              <span className="muted">
+                · {unsettledCount} {unsettledCount === 1 ? 'prowizja' : plural(unsettledCount).replace('pozycj', 'prowizj')}
+              </span>
+            </p>
+            <p className="muted my-fee-unsettled-note">
+              Nic nie musisz teraz robić — rozliczymy je, gdy dojdą do {formatPln(threshold)}, albo 1. dnia miesiąca
+              (mniejsze kwoty przechodzą na kolejny miesiąc, najdłużej 3 miesiące). Możesz też zapłacić od razu.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={paying !== null}
+            onClick={() => void pay(SETTLE_NOW)}
+          >
+            {paying === SETTLE_NOW ? 'Przekierowanie…' : `Zapłać teraz ${formatPln(unsettledTotal)}`}
+          </button>
         </div>
       )}
 
@@ -386,7 +469,7 @@ export function MyFeesPage() {
           {pendingFees.length > 0 && (
             <section className="my-fee-section" aria-labelledby="fees-pending">
               <h2 id="fees-pending" className="my-fee-section-title">
-                Do zapłaty <span className="muted">· {pendingFees.length}</span>
+                Do zapłaty <span className="muted">· {pendingFees.length} {pendingFees.length === 1 ? 'prowizja' : plural(pendingFees.length).replace('pozycj', 'prowizj')}</span>
               </h2>
               <div className="my-card-grid">{pendingFees.map(feeCard)}</div>
             </section>

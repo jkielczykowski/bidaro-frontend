@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from './auth'
 import { supabase } from './supabase'
 
-/** public.my_fee_block(): a seller with a fee unpaid 14 days after the sale can't bid or list */
+/** public.my_fee_block(): a seller with a settlement unpaid 14 days after it was issued can't bid or list */
 export type FeeBlock = {
   blocked: boolean
   overdue_amount: number
@@ -10,6 +10,9 @@ export type FeeBlock = {
   due_soon_amount: number
   next_due_at: string | null
   pending_amount: number
+  /** Fees not in a settlement yet (settled at settlement_threshold or on the 1st of the month) */
+  unsettled_amount: number
+  settlement_threshold: number
   payment_days: number
 }
 

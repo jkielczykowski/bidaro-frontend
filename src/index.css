@@ -5133,6 +5133,47 @@ a.nav-user:hover {
   margin-top: 1.5rem;
 }
 
+.my-fee-settlements {
+  margin: 0 0 1.25rem;
+}
+
+.my-fee-unsettled {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.my-fee-unsettled > div {
+  flex: 1 1 22rem;
+}
+
+.my-fee-unsettled-amount {
+  margin: 0.15rem 0 0.35rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.my-fee-unsettled-amount .muted {
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.my-fee-unsettled-note {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.my-fee-settlement-ref {
+  font-size: 0.85rem;
+}
+
 .my-fee-section-title {
   margin: 0 0 0.85rem;
   font-size: 1.1rem;

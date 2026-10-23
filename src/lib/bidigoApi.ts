@@ -23,7 +23,7 @@ async function post<T>(path: string): Promise<T> {
   return (await res.json()) as T
 }
 
-/** Opens (or reuses) a Stripe Checkout session for one of the user's pending fees. */
-export function startFeeCheckout(feeId: string) {
-  return post<{ checkoutUrl: string; expiresAt?: string }>(`/fees/${feeId}/checkout`)
+/** Opens (or reuses) a Stripe Checkout session paying one of the user's pending fee settlements. */
+export function startSettlementCheckout(settlementId: string) {
+  return post<{ checkoutUrl: string; expiresAt?: string }>(`/fee-settlements/${settlementId}/checkout`)
 }
