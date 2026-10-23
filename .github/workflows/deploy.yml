@@ -1,7 +1,8 @@
 name: Deploy
 
 # Web app pipeline (FluffyTag-style; secrets in .github/SECRETS.md). Every push to master:
-# build + lint → full E2E suite from bidaro-backend against THIS web build → deploy → smoke.
+# build + lint → deploy → smoke. The full E2E suite from bidaro-backend against THIS web build runs
+# on pull requests and on a manual run with e2e=true.
 on:
   push:
     branches:
@@ -10,6 +11,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: Run the full E2E suite before deploying
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -45,6 +51,8 @@ jobs:
 
   e2e:
     needs: build
+    # Off on pushes for faster deploys; runs on pull requests or a manual run with e2e=true
+    if: github.event_name == 'pull_request' || inputs.e2e
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -117,8 +125,9 @@ jobs:
           retention-days: 7
 
   deploy:
-    needs: e2e
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [build, e2e]
+    # Runs when E2E passed or was skipped, never when it failed
+    if: ${{ !cancelled() && needs.build.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.e2e.result) && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -144,6 +153,8 @@ jobs:
 
   smoke:
     needs: deploy
+    # Explicit, or a skipped e2e further up would skip this job too
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
