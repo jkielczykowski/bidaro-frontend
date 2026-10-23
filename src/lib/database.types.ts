@@ -35,6 +35,7 @@ export type SellerFee = {
   fee_amount: number
   status: 'pending' | 'paid' | 'cancelled' | 'waived'
   created_at: string
+  paid_at: string | null
 }
 
 export type Auction = {

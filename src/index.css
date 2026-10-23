@@ -5111,6 +5111,15 @@ a.nav-user:hover {
   color: var(--accent-hover);
 }
 
+.my-fee-pay {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+.my-fee-notice {
+  margin: 0 0 1rem;
+}
+
 .my-fee-summary {
   display: flex;
   flex-wrap: wrap;
