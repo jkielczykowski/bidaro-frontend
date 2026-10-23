@@ -1,23 +1,33 @@
 #!/usr/bin/env bash
 # Deploys the web app (nginx + built React app) to the VPS as container `bidigo-frontend`.
 # The search API it proxies (/api/search → bidigo-search) and the mail worker come from bidigo-backend.
-# Locally: values from .env. In GitHub Actions: from repository secrets (see .github/SECRETS.md).
+# Where it goes: TARGET (default test) picks deploy/targets/<TARGET>.env — server, user, port, public
+# URL. Secrets: locally from .env (test) or .env.<TARGET>; in GitHub Actions from the environment
+# named like the target (see .github/SECRETS.md).
 set -euo pipefail
 
-VPS_HOST="${VPS_HOST:-72.61.177.37}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TARGET="${TARGET:-test}"
+TARGET_FILE="${ROOT}/deploy/targets/${TARGET}.env"
+[[ -f "${TARGET_FILE}" ]] || { echo "No ${TARGET_FILE} — create it from deploy/targets/production.env.example"; exit 1; }
+
+ENV_FILE="${ROOT}/.env"
+[[ "${TARGET}" != "test" ]] && ENV_FILE="${ROOT}/.env.${TARGET}"
+set -a
+# shellcheck disable=SC1090
+[[ -f "${ENV_FILE}" ]] && source "${ENV_FILE}"
+# The target file comes last: its server settings win over anything in .env
+# shellcheck disable=SC1090
+source "${TARGET_FILE}"
+set +a
+
 VPS_USER="${VPS_USER:-root}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/memorlee-deploy}"
 APP_NAME="${APP_NAME:-bidigo-frontend}"
-HOST_HTTP_PORT="${HOST_HTTP_PORT:-9088}"
 REMOTE_DIR="/opt/${APP_NAME}"
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-
-if [[ -f "${ROOT}/.env" ]]; then
-  # shellcheck disable=SC1091
-  set -a
-  source "${ROOT}/.env"
-  set +a
-fi
+: "${VPS_HOST:?VPS_HOST missing in ${TARGET_FILE}}"
+: "${HOST_HTTP_PORT:?HOST_HTTP_PORT missing in ${TARGET_FILE}}"
+echo "→ Target: ${TARGET} (${VPS_USER}@${VPS_HOST}, port ${HOST_HTTP_PORT})"
 
 VITE_SUPABASE_URL="${VITE_SUPABASE_URL:-}"
 VITE_SUPABASE_ANON_KEY="${VITE_SUPABASE_ANON_KEY:-}"
@@ -76,4 +86,4 @@ rm -rf /opt/bidaro-frontend
 docker compose -p ${APP_NAME} -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
 REMOTE
 
-echo "✓ Bidigo web: http://${VPS_HOST}:${HOST_HTTP_PORT}"
+echo "✓ Bidigo web: ${PUBLIC_URL}"

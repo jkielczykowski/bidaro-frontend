@@ -1,8 +1,10 @@
 name: Deploy
 
-# Web app pipeline (FluffyTag-style; secrets in .github/SECRETS.md). Every push to master:
-# build + lint → deploy → smoke. The full E2E suite from bidigo-backend against THIS web build runs
-# on pull requests and on a manual run with e2e=true.
+# Web app pipeline (FluffyTag-style; secrets in .github/SECRETS.md). Every push to main:
+# build + lint → deploy to the test server → smoke. A manual run can pick another target
+# (deploy/targets/<target>.env + the GitHub environment of the same name with its own secrets).
+# The full E2E suite from bidigo-backend against THIS web build runs on pull requests and on a
+# manual run with e2e=true.
 on:
   push:
     branches:
@@ -16,13 +18,18 @@ on:
         description: Run the full E2E suite before deploying
         type: boolean
         default: false
+      target:
+        description: Where to deploy (deploy/targets/<target>.env + GitHub environment)
+        type: choice
+        options: [test, production]
+        default: test
 
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  BIDIGO_URL: ${{ vars.BIDIGO_URL || 'http://72.61.177.37:9088' }}
+  TARGET: ${{ inputs.target || 'test' }}
   BACKEND_REPO: jkielczykowski/bidigo-backend
 
 jobs:
@@ -125,6 +132,7 @@ jobs:
           retention-days: 7
 
   deploy:
+    environment: ${{ inputs.target || 'test' }}
     needs: [build, e2e]
     # Runs when E2E passed or was skipped, never when it failed
     if: ${{ !cancelled() && needs.build.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.e2e.result) && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
@@ -145,17 +153,19 @@ jobs:
 
       - name: Deploy web app to VPS
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST || '72.61.177.37' }}
-          VPS_USER: ${{ secrets.VPS_USERNAME || 'root' }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: SSH_KEY="$HOME/.ssh/bidigo-deploy" bash deploy/deploy.sh
 
   smoke:
+    environment: ${{ inputs.target || 'test' }}
     needs: deploy
     # Explicit, or a skipped e2e further up would skip this job too
     if: ${{ !cancelled() && needs.deploy.result == 'success' }}
     runs-on: ubuntu-latest
+    # Browsers and their system packages are in the image (installing them via apt sometimes took 10 min);
+    # keep the tag equal to @playwright/test in smoke/package-lock.json
+    container: mcr.microsoft.com/playwright:v1.56.1-noble
     timeout-minutes: 10
 
     steps:
@@ -172,15 +182,15 @@ jobs:
       - name: Install dependencies
         run: npm ci --prefix smoke
 
-      - name: Install Playwright browsers
-        working-directory: smoke
-        run: npx playwright install --with-deps chromium
+      - name: Read the target's public URL
+        run: |
+          . "deploy/targets/${TARGET}.env"
+          echo "SMOKE_BASE_URL=${PUBLIC_URL}" >> "$GITHUB_ENV"
 
       - name: Run smoke tests against the deployed site
         working-directory: smoke
         env:
           CI: true
-          SMOKE_BASE_URL: ${{ env.BIDIGO_URL }}
         run: npm test
 
       - name: Upload smoke report
