@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { LocationMapView } from '../components/LocationMap'
+import { FeeBlockBanner } from '../components/FeeBlockBanner'
 import { Modal } from '../components/Modal'
 import { useAuth } from '../lib/auth'
+import { errorMessage } from '../lib/errors'
+import { isFeeBlockError, useFeeBlock } from '../lib/feeBlock'
 import type { Auction, AuctionComment, Bid, SellerNote, SellerRating } from '../lib/database.types'
 import { bidLabel, formatEndsAt, formatPln, formatRemaining, minNextBid } from '../lib/format'
 import { PUBLIC_PROFILE_COLUMNS, supabase } from '../lib/supabase'
@@ -126,6 +129,7 @@ export function AuctionDetailPage() {
   )
 
   const isSeller = !!user && auction?.seller_id === user.id
+  const { block: feeBlock, reload: reloadFeeBlock } = useFeeBlock()
   const isAdmin = !!profile?.is_admin
   const isWinner = !!user && auction?.winner_id === user.id
   const canChat = auction?.status === 'sold' && (isSeller || isWinner)
@@ -299,7 +303,8 @@ export function AuctionDetailPage() {
       amountTouched.current = false // bid placed — show the next minimum again
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nie udało się złożyć oferty')
+      setError(errorMessage(err, 'Nie udało się złożyć oferty'))
+      if (isFeeBlockError(err)) void reloadFeeBlock()
     } finally {
       setBusy(false)
     }
@@ -328,7 +333,8 @@ export function AuctionDetailPage() {
       setBuyNowOpen(false)
       await load()
     } catch (err) {
-      setBuyNowError(err instanceof Error ? err.message : 'Nie udało się kupić')
+      setBuyNowError(errorMessage(err, 'Nie udało się kupić'))
+      if (isFeeBlockError(err)) void reloadFeeBlock()
     } finally {
       setBusy(false)
     }
@@ -485,6 +491,8 @@ export function AuctionDetailPage() {
               Żeby licytować, <Link to={`/verify-phone?next=/auction/${id}`}>potwierdź numer telefonu SMS</Link>.
             </p>
           )}
+
+          {live && !isSeller && feeBlock?.blocked && <FeeBlockBanner block={feeBlock} />}
 
           {live && !isSeller && (
             <div className="bid-form-wrap">

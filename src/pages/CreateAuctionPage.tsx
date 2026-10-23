@@ -4,8 +4,11 @@ import { CategoryPicker } from '../components/CategoryPicker'
 import { CitySuggest } from '../components/CitySuggest'
 import { LocationMapPicker } from '../components/LocationMap'
 import { geocodeCity } from '../lib/cities'
+import { FeeBlockBanner } from '../components/FeeBlockBanner'
 import { ImageCropDialog } from '../components/ImageCropDialog'
 import { useAuth } from '../lib/auth'
+import { errorMessage } from '../lib/errors'
+import { isFeeBlockError, useFeeBlock } from '../lib/feeBlock'
 import type { Auction, Category } from '../lib/database.types'
 import { calcSuccessFee, formatPln } from '../lib/format'
 import { newId } from '../lib/id'
@@ -48,6 +51,7 @@ function isLeafCategory(categories: Category[], id: string) {
 
 export function CreateAuctionPage() {
   const { user, profile, loading } = useAuth()
+  const { block: feeBlock, reload: reloadFeeBlock } = useFeeBlock()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const relistId = searchParams.get('relist')
@@ -349,7 +353,8 @@ export function CreateAuctionPage() {
         navigate(`/auction/${created.id}`)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nie udało się wystawić aukcji')
+      setError(errorMessage(err, 'Nie udało się wystawić aukcji'))
+      if (isFeeBlockError(err)) void reloadFeeBlock()
     } finally {
       setBusy(false)
     }
@@ -386,6 +391,7 @@ export function CreateAuctionPage() {
           ? 'Skopiowaliśmy dane z poprzedniej aukcji — dodaj zdjęcia i wystaw.'
           : 'Wymagane: tytuł, opis, kategoria, miasto, min. 1 zdjęcie (max 5), ceny i dostawa.'}
       </p>
+      <FeeBlockBanner block={feeBlock} />
       <form className="card-form" onSubmit={onSubmit} noValidate>
         <label className={fieldErrors.title ? 'has-error' : ''}>
           <span className="label-text">

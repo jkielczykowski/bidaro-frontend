@@ -1,0 +1,44 @@
+.fee-block-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+
+.fee-block-banner-soon {
+  border-color: color-mix(in srgb, var(--accent-orange) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent-orange) 9%, var(--surface));
+}
+
+.fee-block-banner-title {
+  margin: 0 0 4px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fee-block-banner-blocked .fee-block-banner-title {
+  color: var(--danger);
+}
+
+.fee-block-banner-body {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.fee-block-banner .btn {
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .fee-block-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

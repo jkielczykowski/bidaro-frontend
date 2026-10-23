@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { FeeBlockBanner } from '../components/FeeBlockBanner'
 import { useAuth } from '../lib/auth'
+import { useFeeBlock } from '../lib/feeBlock'
 import { useNotifications } from '../lib/notifications'
 import { useUnreadMessages } from '../lib/unreadMessages'
 import { formatPln } from '../lib/format'
@@ -48,6 +50,7 @@ export function MyHubPage() {
   const { user, profile } = useAuth()
   const { unread: msgUnread } = useUnreadMessages()
   const { unread: notifUnread } = useNotifications()
+  const { block } = useFeeBlock()
   const [stats, setStats] = useState<HubStats>({
     selling: 0,
     bidding: 0,
@@ -187,6 +190,8 @@ export function MyHubPage() {
         </h1>
         <p>Wybierz kafelek — aukcje, opłaty i wiadomości są osobno, nie na jednej ścianie.</p>
       </div>
+
+      <FeeBlockBanner block={block} showDueSoon />
 
       <section className="my-hub-section">
         <header className="my-hub-section-head">

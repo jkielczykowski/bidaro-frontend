@@ -19,6 +19,8 @@ export type AppNotification = {
     | 'moderation_approved'
     | 'seller_rated'
     | 'auction_comment'
+    | 'fee_due'
+    | 'fee_overdue'
   title: string
   body: string
   auction_id: string | null
@@ -61,6 +63,10 @@ function typeLabel(type: AppNotification['type']) {
       return 'Odrzucone'
     case 'moderation_approved':
       return 'OK'
+    case 'fee_due':
+      return 'Prowizja'
+    case 'fee_overdue':
+      return 'Blokada'
     default:
       return 'Info'
   }
@@ -238,6 +244,17 @@ export function NotificationsPage() {
                 <strong className="notif-title">{n.title}</strong>
                 <p className="notif-body">{n.body}</p>
                 <div className="notif-actions">
+                  {(n.type === 'fee_due' || n.type === 'fee_overdue') && (
+                    <Link
+                      to="/my/fees?status=pending"
+                      className="btn btn-primary btn-sm"
+                      onClick={() => {
+                        if (!n.read_at) void markOne(n.id)
+                      }}
+                    >
+                      Zapłać prowizję
+                    </Link>
+                  )}
                   {n.auction_id && (
                     <Link
                       to={`/auction/${n.auction_id}`}

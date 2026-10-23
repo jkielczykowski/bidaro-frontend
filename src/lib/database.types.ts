@@ -35,6 +35,8 @@ export type SellerFee = {
   fee_amount: number
   status: 'pending' | 'paid' | 'cancelled' | 'waived'
   created_at: string
+  /** 14 days after the sale; past it the account is blocked until the fee is paid */
+  due_at: string
   paid_at: string | null
 }
 

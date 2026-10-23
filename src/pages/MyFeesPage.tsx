@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { FeeBlockBanner } from '../components/FeeBlockBanner'
 import { Pagination } from '../components/Pagination'
 import { useAuth } from '../lib/auth'
 import { ApiError, startFeeCheckout } from '../lib/bidigoApi'
 import type { SellerFee } from '../lib/database.types'
+import { useFeeBlock } from '../lib/feeBlock'
 import { formatPln } from '../lib/format'
 import { supabase } from '../lib/supabase'
 
@@ -57,6 +59,16 @@ const STATUS_LABEL: Record<SellerFee['status'], string> = {
   waived: 'Umorzona',
 }
 
+function FeeDue({ dueAt }: { dueAt: string }) {
+  const due = new Date(dueAt)
+  const overdue = due.getTime() <= Date.now()
+  return (
+    <p className={`my-card-body my-fee-due${overdue ? ' error' : ''}`}>
+      {overdue ? 'Po terminie' : 'Termin zapłaty'}: {due.toLocaleDateString('pl-PL')}
+    </p>
+  )
+}
+
 export function MyFeesPage() {
   const { user } = useAuth()
   const [pendingFees, setPendingFees] = useState<FeeRow[]>([])
@@ -69,6 +81,7 @@ export function MyFeesPage() {
   const [paying, setPaying] = useState<string | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
   const [confirmed, setConfirmed] = useState(false)
+  const { block, reload: reloadBlock } = useFeeBlock()
   // Stripe Checkout sends the seller back here with ?paid=<fee id> or ?cancelled=<fee id>
   // Filters and page live in the URL (?status=&q=&from=&to=&page=), so a refresh keeps them
   const [params, setParams] = useSearchParams()
@@ -167,6 +180,7 @@ export function MyFeesPage() {
       if (data?.status === 'paid') {
         setConfirmed(true)
         void load()
+        void reloadBlock()
       } else if (++tries < 40) {
         setTimeout(check, 1500)
       }
@@ -175,7 +189,7 @@ export function MyFeesPage() {
     return () => {
       stopped = true
     }
-  }, [returnedPaid, user, load])
+  }, [returnedPaid, user, load, reloadBlock])
 
   async function pay(feeId: string) {
     setPaying(feeId)
@@ -196,6 +210,12 @@ export function MyFeesPage() {
       }
     }
   }
+
+  // The banner's "Zapłać" pays the unpaid fee past or nearest its due date
+  const oldestPending = pendingFees.reduce<FeeRow | null>(
+    (oldest, f) => (!oldest || f.due_at < oldest.due_at ? f : oldest),
+    null,
+  )
 
   function goPage(p: number) {
     setParam({ page: String(Math.min(Math.max(1, p), pageCount)) })
@@ -227,6 +247,7 @@ export function MyFeesPage() {
           Sprzedaż {formatPln(f.sale_price)} · prowizja {Number(f.fee_percent)}%
         </p>
         <p className="my-fee-amount">{formatPln(f.fee_amount)}</p>
+        {!settled && f.due_at && <FeeDue dueAt={f.due_at} />}
         {!settled ? (
           <button
             type="button"
@@ -286,6 +307,13 @@ export function MyFeesPage() {
           {payError}
         </p>
       )}
+
+      <FeeBlockBanner
+        block={block}
+        showDueSoon
+        onPay={oldestPending ? () => void pay(oldestPending.id) : undefined}
+        paying={paying !== null}
+      />
 
       {allCount > 0 && pendingTotal > 0 && (
         <div className="my-fee-summary">
