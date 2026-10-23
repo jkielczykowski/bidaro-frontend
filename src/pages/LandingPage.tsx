@@ -165,7 +165,7 @@ function HomeAuctionCard({ auction, demo }: { auction: DemoAuction; demo?: boole
 }
 
 // Categories barely change: show the last known list at once, refresh it in the background
-const CATEGORIES_CACHE_KEY = 'bidaro:categories:v1'
+const CATEGORIES_CACHE_KEY = 'bidigo:categories:v1'
 
 function cachedCategories(): Category[] {
   try {

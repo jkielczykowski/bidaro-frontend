@@ -1,7 +1,7 @@
 name: Deploy
 
 # Web app pipeline (FluffyTag-style; secrets in .github/SECRETS.md). Every push to master:
-# build + lint → deploy → smoke. The full E2E suite from bidaro-backend against THIS web build runs
+# build + lint → deploy → smoke. The full E2E suite from bidigo-backend against THIS web build runs
 # on pull requests and on a manual run with e2e=true.
 on:
   push:
@@ -23,7 +23,7 @@ concurrency:
 
 env:
   BIDIGO_URL: ${{ vars.BIDIGO_URL || 'http://72.61.177.37:9088' }}
-  BACKEND_REPO: jkielczykowski/bidaro-backend
+  BACKEND_REPO: jkielczykowski/bidigo-backend
 
 jobs:
   build:
@@ -63,8 +63,8 @@ jobs:
           path: frontend
 
       # The E2E suite, migrations and local stack live in the (private) backend repo;
-      # read through a read-only deploy key of bidaro-backend (scripts/backend-deploy-key.sh)
-      - name: Checkout bidaro-backend
+      # read through a read-only deploy key of bidigo-backend (scripts/backend-deploy-key.sh)
+      - name: Checkout bidigo-backend
         uses: actions/checkout@v4
         with:
           repository: ${{ env.BACKEND_REPO }}
@@ -105,7 +105,7 @@ jobs:
         working-directory: backend/e2e
         run: npm run search:start
 
-      - name: Start bidaro-api (Java) against the local stack
+      - name: Start bidigo-api (Java) against the local stack
         working-directory: backend/e2e
         run: npm run api:start
 
@@ -140,8 +140,8 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/bidaro-deploy
-          chmod 600 ~/.ssh/bidaro-deploy
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/bidigo-deploy
+          chmod 600 ~/.ssh/bidigo-deploy
 
       - name: Deploy web app to VPS
         env:
@@ -149,7 +149,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USERNAME || 'root' }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-        run: SSH_KEY="$HOME/.ssh/bidaro-deploy" bash deploy/deploy.sh
+        run: SSH_KEY="$HOME/.ssh/bidigo-deploy" bash deploy/deploy.sh
 
   smoke:
     needs: deploy

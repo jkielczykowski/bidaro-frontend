@@ -6,7 +6,7 @@ VPS_HOST="${VPS_HOST:-72.61.177.37}"
 VPS_USER="${VPS_USER:-root}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/memorlee-deploy}"
 DOMAIN="${DOMAIN:-bidigo.memorlee.app}"
-APP_CONTAINER="${APP_CONTAINER:-bidaro-frontend}"
+APP_CONTAINER="${APP_CONTAINER:-bidigo-frontend}"
 
 ssh -i "${SSH_KEY}" -o StrictHostKeyChecking=no "${VPS_USER}@${VPS_HOST}" bash -s <<EOF
 set -euo pipefail

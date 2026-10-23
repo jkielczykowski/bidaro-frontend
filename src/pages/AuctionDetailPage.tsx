@@ -101,7 +101,7 @@ export function AuctionDetailPage() {
     void load()
     if (!id) return
     // One broadcast per change on this auction (bid, question, status) from the database
-    // (bidaro-backend V33). A burst of events (proxy auto-bids) triggers a single reload.
+    // (bidigo-backend V33). A burst of events (proxy auto-bids) triggers a single reload.
     let reloadTimer = 0
     const channel = supabase
       .channel(`auction:${id}`)
