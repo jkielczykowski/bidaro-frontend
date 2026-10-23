@@ -280,11 +280,14 @@ export function CreateAuctionPage() {
     try {
       const imageUrls: string[] = []
       for (const photo of photos) {
-        const path = `${user.id}/${newId()}.jpg`
+        // WebP or JPEG, already resized by ImageCropDialog
+        const ext = photo.file.type === 'image/webp' ? 'webp' : 'jpg'
+        const path = `${user.id}/${newId()}.${ext}`
         const { error: upErr } = await supabase.storage.from('auction-images').upload(path, photo.file, {
-          cacheControl: '3600',
+          // Every upload gets a new name, so browsers and the CDN may keep it for a year
+          cacheControl: '31536000',
           upsert: false,
-          contentType: 'image/jpeg',
+          contentType: photo.file.type,
         })
         if (upErr) throw upErr
         const { data: pub } = supabase.storage.from('auction-images').getPublicUrl(path)

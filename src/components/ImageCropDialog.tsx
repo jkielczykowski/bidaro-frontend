@@ -19,8 +19,9 @@ async function getCroppedFile(imageSrc: string, crop: Area, fileName: string): P
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas niedostępny')
 
-  const maxW = 1600
-  const scale = Math.min(1, maxW / crop.width)
+  // Longest side at most 1600 px — enough for the auction gallery, a fraction of a camera original
+  const maxSide = 1600
+  const scale = Math.min(1, maxSide / Math.max(crop.width, crop.height))
   canvas.width = Math.round(crop.width * scale)
   canvas.height = Math.round(crop.height * scale)
 
@@ -38,11 +39,19 @@ async function getCroppedFile(imageSrc: string, crop: Area, fileName: string): P
     canvas.height,
   )
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Nie udało się zapisać kadru'))), 'image/jpeg', 0.92)
-  })
+  // WebP is ~30% smaller than JPEG at the same quality; browsers that can't encode it (Safari)
+  // hand back a PNG instead, so fall back to JPEG there
+  let blob = await canvasToBlob(canvas, 'image/webp', 0.82)
+  if (blob.type !== 'image/webp') blob = await canvasToBlob(canvas, 'image/jpeg', 0.82)
+  const ext = blob.type === 'image/webp' ? '.webp' : '.jpg'
 
-  return new File([blob], fileName.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+  return new File([blob], fileName.replace(/\.[^.]+$/, '') + ext, { type: blob.type })
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Nie udało się zapisać kadru'))), type, quality)
+  })
 }
 
 function createImage(url: string): Promise<HTMLImageElement> {
