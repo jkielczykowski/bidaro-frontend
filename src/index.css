@@ -5120,6 +5120,58 @@ a.nav-user:hover {
   margin: 0 0 1rem;
 }
 
+.my-fee-status-filter {
+  margin: 0 0 0.75rem;
+}
+
+.my-fee-date {
+  min-width: 9.5rem;
+  flex: 0 1 10.5rem;
+}
+
+.my-fee-section {
+  margin-top: 1.5rem;
+}
+
+.my-fee-section-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.1rem;
+}
+
+.my-fee-section-title .muted {
+  font-weight: 400;
+  font-size: 0.95rem;
+}
+
+/* Settled fees step back: plain, muted cards with a green "paid" mark */
+.my-card-settled {
+  background: var(--surface-warm);
+  box-shadow: none;
+}
+
+.my-card-settled .my-card-title,
+.my-card-settled .my-fee-amount {
+  color: var(--text-muted);
+}
+
+.my-card-settled .my-fee-amount {
+  font-size: 1.25rem;
+}
+
+.my-fee-paid-on {
+  color: var(--success);
+  font-weight: 500;
+}
+
+.fee-status.paid {
+  font-weight: 600;
+}
+
+.my-fee-loading {
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
 .my-fee-summary {
   display: flex;
   flex-wrap: wrap;
